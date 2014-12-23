@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -22,8 +23,14 @@ func main() {
 	)
 	service := server.AddService(serviceUUID)
 
+	gpioPin, err := OpenGPIOPin()
+	if err != nil {
+		panic(errors.New("Could not open GPIO pin"))
+	}
+	car := &Car{Pin: gpioPin}
+
 	carChar := service.AddCharacteristic(carUUID)
-	carChar.HandleWriteFunc(HandleCarWrite)
+	carChar.HandleWriteFunc(car.HandleWrite)
 
 	authChar := service.AddCharacteristic(authUUID)
 	authChar.HandleReadFunc(HandleAuthRead)
