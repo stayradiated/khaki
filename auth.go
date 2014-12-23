@@ -11,7 +11,7 @@ import (
 
 var lastChallenge []byte = make([]byte, 16)
 var key []byte = []byte("hunter2")
-var authed = false
+var authed = true
 
 func HandleAuthRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
 	randbo.New().Read(lastChallenge)
