@@ -8,7 +8,9 @@ import (
 	"github.com/davecheney/gpio/rpi"
 )
 
+// OpenGPIOPin opens up a GPIO pin
 func OpenGPIOPin() (gpio.Pin, error) {
+
 	// use GPIO25 pin
 	pin, err := gpio.OpenPin(rpi.GPIO25, gpio.ModeOutput)
 	if err != nil {
