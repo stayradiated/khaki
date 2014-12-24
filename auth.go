@@ -9,23 +9,37 @@ import (
 	"github.com/paypal/gatt"
 )
 
-var lastChallenge []byte = make([]byte, 16)
-var key []byte = []byte("hunter2")
-var authed = true
-
-func HandleAuthRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
-	randbo.New().Read(lastChallenge)
-	resp.Write(lastChallenge)
-	fmt.Println(lastChallenge)
+type Auth struct {
+	authed        bool
+	lastChallenge []byte
+	SecretKey     []byte
 }
 
-func HandleAuthWrite(req gatt.Request, data []byte) (status byte) {
-	mac := hmac.New(sha256.New, key)
-	mac.Write(lastChallenge)
+func NewAuth(secretKey []byte) *Auth {
+	return &Auth{
+		lastChallenge: make([]byte, 16),
+		authed:        false,
+		SecretKey:     secretKey,
+	}
+}
+
+func (a *Auth) IsAuthenticated() bool {
+	return a.authed
+}
+
+func (a *Auth) HandleAuthRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
+	randbo.New().Read(a.lastChallenge)
+	resp.Write(a.lastChallenge)
+	fmt.Println(a.lastChallenge)
+}
+
+func (a *Auth) HandleAuthWrite(req gatt.Request, data []byte) (status byte) {
+	mac := hmac.New(sha256.New, a.SecretKey)
+	mac.Write(a.lastChallenge)
 	expectedMac := mac.Sum(nil)
 	equal := hmac.Equal(expectedMac, data)
 
-	authed = equal
+	a.authed = equal
 
 	fmt.Println("data:", data)
 	fmt.Println("hmac:", expectedMac)

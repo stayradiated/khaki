@@ -8,11 +8,19 @@ import (
 )
 
 type Car struct {
-	Pin gpio.Pin
+	Pin  gpio.Pin
+	Auth *Auth
+}
+
+func NewCar(pin gpio.Pin, auth *Auth) *Car {
+	return &Car{
+		Pin:  pin,
+		Auth: auth,
+	}
 }
 
 func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
-	if !authed {
+	if !c.Auth.IsAuthenticated() {
 		return gatt.StatusUnexpectedError
 	}
 
