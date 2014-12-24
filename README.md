@@ -2,7 +2,7 @@
 
 > Unlock your car using your phone
 
-## What We Have
+## What You Need
 
 - Raspberry Pi model B
 - Bluetooth 4.0 USB adapter
@@ -20,6 +20,18 @@ lock and unlock the car.
 
 We will be using the github.com/paypal/gatt library to setup a BLE peripheral
 that can be connected to from a phone.
+
+## How It Will Work
+
+As you approach the car, your iPhone will automatically connect to the car and
+authenticate with it. Then as you approach a specified distance the iPhone will
+send the command to unlock the car.
+
+When you walk away from the car, the iPhone will send the command to lock the
+car.
+
+The iPhone app will run in the background so you can keep your phone in your
+pocket and it will still work.
 
 ## Security
 
@@ -47,6 +59,12 @@ connection.
 
     // Server validates the HMAC and responds with status
     S -> [01]
+
+    // Client can now lock/unlock the car
+    C -> WRITE lock 01
+
+    // Server responds with success
+    S -> Success
 
 The challenge code is hashed using HMAC with SHA256.
 
