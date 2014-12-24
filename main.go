@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/paypal/gatt"
 )
@@ -42,6 +43,13 @@ func main() {
 func HandleConnect(conn gatt.Conn) {
 	fmt.Println("Got connection")
 	fmt.Println(conn)
+
+	fmt.Println("You have 5 seconds...")
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		conn.Close()
+	}()
 }
 
 func HandleDisconnect(conn gatt.Conn) {
