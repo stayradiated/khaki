@@ -50,9 +50,9 @@ connection.
 
 The challenge code is hashed using HMAC with SHA256.
 
-   h := hmac.New(sha256.New, secretKey)
-   h.Write(challengeCode)
-   result := h.Sum(nil)
+    h := hmac.New(sha256.New, secretKey)
+    h.Write(challengeCode)
+    result := h.Sum(nil)
 
 This authentication process is only needed when the client first connects to
 the server. From then on the connection is marked as authenticated, and the
