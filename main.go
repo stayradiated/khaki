@@ -24,7 +24,6 @@ func main() {
 
 	server := gatt.NewServer(
 		gatt.Name("Khaki"),
-		gatt.AdvertiseServices([]gatt.UUID{serviceUUID}),
 		gatt.HCI("hci0"),
 		gatt.MaxConnections(1),
 		gatt.Connect(HandleConnect),
