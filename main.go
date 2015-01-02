@@ -60,7 +60,7 @@ func HandleConnect(conn gatt.Conn) {
 
 	go func() {
 		time.Sleep(5 * time.Second)
-		if auth.IsAuthenticated() {
+		if !auth.IsAuthenticated() {
 			// conn.Close()
 		}
 	}()
