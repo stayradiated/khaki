@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/davecheney/gpio"
@@ -26,7 +27,8 @@ func NewCar(pin gpio.Pin, auth *Auth) *Car {
 
 func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 	if !c.Auth.IsAuthenticated() {
-		return gatt.StatusUnexpectedError
+		fmt.Println("You are not authenticated...")
+		// return gatt.StatusUnexpectedError
 	}
 
 	// don't do anything if the state already matches the request
