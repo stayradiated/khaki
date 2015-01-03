@@ -23,12 +23,13 @@ var car *Car
 // main starts up the BLE server
 func main() {
 
-	beaconData := NewBeacon(beaconUUID, 0, 0, 0x32)
+	packet := NewBeacon(beaconUUID, 0, 0, 0x32).AdvertisingPacket()
+	fmt.Println(packet)
 
 	iBeacon := gatt.NewServer(
 		gatt.Name("KhakiBeacon"),
 		gatt.HCI(1),
-		gatt.AdvertisingPacket(beaconData.AdvertisingPacket()),
+		gatt.AdvertisingPacket(packet),
 	)
 
 	server := gatt.NewServer(
