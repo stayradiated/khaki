@@ -10,6 +10,7 @@ import (
 
 // services
 var serviceUUID = gatt.MustParseUUID("54a64ddf-c756-4a1a-bf9d-14f2cac357ad")
+var beaconUUID = gatt.MustParseUUID("a78d9129-b79a-400f-825e-b691661123eb")
 
 // characteristics
 var carUUID = gatt.MustParseUUID("fd1c6fcc-3ca5-48a9-97e9-37f81f5bd9c5")
@@ -22,10 +23,17 @@ var car *Car
 // main starts up the BLE server
 func main() {
 
+	beaconData := NewBeacon(beaconUUID, 0, 0, 0x32)
+
+	iBeacon := gatt.NewServer(
+		gatt.Name("KhakiBeacon"),
+		gatt.HCI("hci1"),
+		gatt.AdvertisingPacket(beaconData.AdvertisingPacket()),
+	)
+
 	server := gatt.NewServer(
 		gatt.Name("Khaki"),
 		gatt.HCI("hci0"),
-		gatt.MaxConnections(1),
 		gatt.Connect(HandleConnect),
 		gatt.Disconnect(HandleDisconnect),
 	)
@@ -50,6 +58,7 @@ func main() {
 	carChar := service.AddCharacteristic(carUUID)
 	carChar.HandleWriteFunc(car.HandleWrite)
 
+	go log.Fatal(iBeacon.AdvertiseAndServe())
 	log.Fatal(server.AdvertiseAndServe())
 }
 

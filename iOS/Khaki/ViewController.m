@@ -18,7 +18,11 @@
     [super viewDidLoad];
     
     // Initiate CBCentralManager
-    self.centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
+    self.centralManager = [[CBCentralManager alloc] initWithDelegate:self
+                                                               queue:nil
+                                                             options:@{
+                                                                       CBCentralManagerOptionRestoreIdentifierKey: @"KhakiCentral"
+                                                                       }];
 }
 
 - (void)didReceiveMemoryWarning {
@@ -30,34 +34,82 @@
 
 // Called when the bluetooth chip changes state (i.e. powers on)
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central {
-    switch ([central state]) {
-        case CBCentralManagerStatePoweredOn: {
-            NSLog(@"CoreBluetooth BLE hardware is powered on");
-            NSArray *services = @[KHAKI_SERVICE_UUID];
-            [self.centralManager scanForPeripheralsWithServices:services options:nil];
-            NSLog(@"Scanning for Khaki service: %@", services);
-            break;
+    
+    if ([central state] == CBCentralManagerStatePoweredOn) {
+        NSLog(@"CoreBluetooth BLE hardware is powered on");
+        
+        // Start scanning for services
+        [self.centralManager scanForPeripheralsWithServices:@[KHAKI_SERVICE_UUID] options:nil];
+        
+        if (self.peripheral) {
+            NSLog(@"Already have a peripheral");
+            if (self.peripheral.state == CBPeripheralStateConnected) {
+                
+                // Check if we have discovered the service
+                NSUInteger serviceIdx = [self.peripheral.services indexOfObjectPassingTest:^BOOL(CBService *obj, NSUInteger idx, BOOL *stop) {
+                    return [obj.UUID isEqual:KHAKI_SERVICE_UUID];
+                }];
+                
+                if (serviceIdx == NSNotFound) {
+                    // We haven't discovered all the services yet
+                    [self.peripheral discoverServices:@[KHAKI_SERVICE_UUID]];
+                    return;
+                }
+                
+                CBService *service = self.peripheral.services[serviceIdx];
+                
+                // Check if we have discovered the car characteristic
+                NSUInteger carCharIdx = [service.characteristics indexOfObjectPassingTest:^BOOL(CBCharacteristic *obj, NSUInteger idx, BOOL *stop) {
+                    return [obj.UUID isEqual:KHAKI_CAR_CHARACTERISTIC_UUID];
+                }];
+                
+                // Check if we have discovered the car characteristic
+                NSUInteger authCharIdx = [service.characteristics indexOfObjectPassingTest:^BOOL(CBCharacteristic *obj, NSUInteger idx, BOOL *stop) {
+                    return [obj.UUID isEqual:KHAKI_AUTH_CHARACTERISTIC_UUID];
+                }];
+                
+                // Build an array of services that we haven't got yet
+                NSMutableArray *services = [[NSMutableArray alloc] init];
+                
+                if (carCharIdx == NSNotFound) {
+                    [services addObject:KHAKI_CAR_CHARACTERISTIC_UUID];
+                } else {
+                    self.carCharacteristic = service.characteristics[carCharIdx];
+                }
+                
+                if (authCharIdx == NSNotFound) {
+                    [services addObject:KHAKI_AUTH_CHARACTERISTIC_UUID];
+                } else {
+                    self.authCharacteristic = service.characteristics[authCharIdx];
+                }
+                
+                if ([services count] > 0) {
+                    // We haven't discovered all the characteristic yet!
+                    [self.peripheral discoverCharacteristics:services forService:service];
+                    return;
+                }
+                
+            }
         }
-        case CBCentralManagerStatePoweredOff: {
-            NSLog(@"CoreBluetooth BLE hardware is powered off");
-            break;
-        }
-        case CBCentralManagerStateUnauthorized: {
-            NSLog(@"CoreBluetooth BLE hardware is unauthorized");
-            break;
-        }
-        case CBCentralManagerStateUnsupported: {
-            NSLog(@"CoreBluetooth BLE hardware is unsupported");
-            break;
-        }
-        case CBCentralManagerStateResetting: {
-            NSLog(@"CoreBluetooth BLE hardware is resetting");
-            break;
-        }
-        case CBCentralManagerStateUnknown: {
-            NSLog(@"CoreBluetooth BLE hardware is in an unknown state");
-            break;
-        }
+        
+    } else {
+        NSLog(@"CoreBluetooth BLE hardware is powered off");
+        self.peripheral = nil;
+        self.carCharacteristic = nil;
+        self.authCharacteristic = nil;
+    }
+}
+
+- (void)centralManager:(CBCentralManager *)central willRestoreState:(NSDictionary *)state {
+    // NSArray *scanServices = state[CBCentralManagerRestoredStateScanServicesKey];
+    // NSArray *scanOptions = state[CBCentralManagerRestoredStateScanOptionsKey];
+    
+    NSLog(@"Restoring app!");
+    
+    NSArray *peripherals = state[CBCentralManagerRestoredStatePeripheralsKey];
+    if ([peripherals count] > 0) {
+        self.peripheral = peripherals[0];
+        self.peripheral.delegate = self;
     }
 }
 
@@ -75,9 +127,25 @@
 
 // Called when a bluetooth peripheral is connected to
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
+    self.connectedLabel.text = @"Connected";
+    
     [peripheral setDelegate:self];
-    NSArray *services = @[KHAKI_SERVICE_UUID];
-    [peripheral discoverServices:services];
+    [peripheral discoverServices:@[KHAKI_SERVICE_UUID]];
+}
+
+// Called when a peripheral cannot be connected
+- (void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
+    NSLog(@"Failed to connect to peripheral %@ (%@)", peripheral, error);
+}
+
+// Called when a bluetooth peripheral is disconnected
+- (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
+    NSLog(@"Disconnected peripheral %@ (%@)", peripheral, error);
+    
+    self.connectedLabel.text = @"Not Connected";
+    
+    // Maybe try scanning again?
+    [self.centralManager scanForPeripheralsWithServices:@[KHAKI_SERVICE_UUID] options:nil];
 }
 
 #pragma mark - CBPeripheralDelegate
@@ -96,36 +164,37 @@
 
 // Called when the characteristics for a service are discovered
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverCharacteristicsForService:(CBService *)service error:(NSError *)error {
-    for (CBCharacteristic *characteristic in service.characteristics) {
-        
-        // Car Characteristic
-        if ([characteristic.UUID isEqual:KHAKI_CAR_CHARACTERISTIC_UUID]) {
-            NSLog(@"Found Khaki Car characteristc");
-            self.carCharacteristic = characteristic;
-        }
-        
-        // Auth Characteristic
-        else if ([characteristic.UUID isEqual:KHAKI_AUTH_CHARACTERISTIC_UUID]) {
-            NSLog(@"Found Khaki Auth characteristic");
-            self.authCharacteristic = characteristic;
-            [peripheral readValueForCharacteristic:characteristic];
+    if (! error) {
+        for (CBCharacteristic *characteristic in service.characteristics) {
+            
+            // Car Characteristic
+            if ([characteristic.UUID isEqual:KHAKI_CAR_CHARACTERISTIC_UUID]) {
+                NSLog(@"Found Khaki Car characteristc");
+                self.carCharacteristic = characteristic;
+            }
+            
+            // Auth Characteristic
+            else if ([characteristic.UUID isEqual:KHAKI_AUTH_CHARACTERISTIC_UUID]) {
+                NSLog(@"Found Khaki Auth characteristic");
+                self.authCharacteristic = characteristic;
+                [peripheral readValueForCharacteristic:characteristic];
+            }
         }
     }
 }
 
 // Called when a value is read from a characteristic
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
-    
-    if ([characteristic.UUID isEqual:KHAKI_AUTH_CHARACTERISTIC_UUID]) {
-        [self authenticate:characteristic];
+    if (! error) {
+        if ([characteristic.UUID isEqual:KHAKI_AUTH_CHARACTERISTIC_UUID]) {
+            [self authenticate:characteristic];
+        }
     }
-    
 }
 
 #pragma mark - Buttons
 
 - (IBAction)tapUnlockButton:(id)sender {
-    NSLog(@"Tapping button");
     [self unlock];
 }
 
@@ -151,6 +220,11 @@
 }
 
 - (void)unlock {
+    
+    if (self.peripheral == nil || self.carCharacteristic == nil) {
+        NSLog(@"Not yet connected...");
+    }
+    
     const unsigned char bytes[] = {2};
     NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
     

@@ -23,5 +23,7 @@
 @property (nonatomic, strong) CBCharacteristic *authCharacteristic;
 @property (nonatomic, strong) CBCharacteristic *carCharacteristic;
 
+@property (weak, nonatomic) IBOutlet UILabel *connectedLabel;
+
 @end
 
