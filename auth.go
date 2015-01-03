@@ -43,7 +43,8 @@ func (a *Auth) HandleAuthWrite(req gatt.Request, data []byte) (status byte) {
 
 	fmt.Println("data:", data)
 	fmt.Println("hmac:", expectedMac)
-	fmt.Println("equal:", equal)
+
+	fmt.Println("Authentication status:", equal)
 
 	return gatt.StatusSuccess
 }
