@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/dustin/randbo"
-	"github.com/paypal/gatt"
+	"github.com/roylee17/gatt"
 )
 
 type Auth struct {
