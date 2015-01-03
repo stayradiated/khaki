@@ -24,7 +24,7 @@ var car *Car
 func main() {
 
 	packet := NewBeacon(beaconUUID, 0, 0, 0x32).AdvertisingPacket()
-	fmt.Println(packet)
+	fmt.Printf("%x\n", packet)
 
 	iBeacon := gatt.NewServer(
 		gatt.Name("KhakiBeacon"),

@@ -32,14 +32,15 @@ func NewBeacon(uuid gatt.UUID, major uint16, minor uint16, power byte) *Beacon {
 func (b Beacon) AdvertisingPacket() []byte {
 
 	packet := []byte{
-		0x02, // Number of bytes that follow in first advertising structure
-		0x01, // Number of flags
-		0x1A, // Flag -> 0x1A = 0001 1010
+		0x02, // Number of bytes that follow in first AD structure
+		0x01, // Flags AD type
+		0x1A, // Flag value 0x1A = 0001 1010
 		0x1A, // Number of bytes that follow in second advertising structure
 		0xFF, // Manafacturer specific data advertising type
 
 		// Apple company identifier
-		0x4c, 0x00,
+		0x4c,
+		0x00,
 
 		// iBeacon identifier
 		0x02,
