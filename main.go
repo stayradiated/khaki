@@ -27,13 +27,13 @@ func main() {
 
 	iBeacon := gatt.NewServer(
 		gatt.Name("KhakiBeacon"),
-		gatt.HCI("hci1"),
+		gatt.HCI(1),
 		gatt.AdvertisingPacket(beaconData.AdvertisingPacket()),
 	)
 
 	server := gatt.NewServer(
 		gatt.Name("Khaki"),
-		gatt.HCI("hci0"),
+		gatt.HCI(0),
 		gatt.Connect(HandleConnect),
 		gatt.Disconnect(HandleDisconnect),
 	)
@@ -58,8 +58,15 @@ func main() {
 	carChar := service.AddCharacteristic(carUUID)
 	carChar.HandleWriteFunc(car.HandleWrite)
 
-	go log.Fatal(iBeacon.AdvertiseAndServe())
-	log.Fatal(server.AdvertiseAndServe())
+	go func() {
+		log.Fatal(iBeacon.AdvertiseAndServe())
+	}()
+
+	go func() {
+		log.Fatal(server.AdvertiseAndServe())
+	}()
+
+	select {}
 }
 
 func HandleConnect(conn gatt.Conn) {
