@@ -43,6 +43,7 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 		c.Pin.Set()
 		time.Sleep(100 * time.Millisecond)
 		c.Pin.Clear()
+		c.isLocked = (data[0] == LOCK_CAR)
 	}()
 
 	return gatt.StatusSuccess
