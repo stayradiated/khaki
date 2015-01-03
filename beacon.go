@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/hex"
 
-	"github.com/roylee17/gatt"
+	"github.com/paypal/gatt"
 )
 
 // Based on https://github.com/izqui/beacon

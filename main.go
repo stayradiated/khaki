@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/roylee17/gatt"
+	"github.com/paypal/gatt"
 )
 
 // services

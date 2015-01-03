@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/davecheney/gpio"
-	"github.com/roylee17/gatt"
+	"github.com/paypal/gatt"
 )
 
 const UNLOCK_CAR = 1
