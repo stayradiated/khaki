@@ -40,6 +40,10 @@
 	<array>
 		<string>bluetooth-central</string>
 	</array>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Always Allow?</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sometimes Allow?</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

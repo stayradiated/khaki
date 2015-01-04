@@ -27,6 +27,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		AD4C807A1A58C8FA006E150A /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 		ADF128C41A573DBC0028E278 /* Khaki.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Khaki.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ADF128C81A573DBC0028E278 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ADF128C91A573DBC0028E278 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -63,6 +64,7 @@
 		ADF128BB1A573DBC0028E278 = {
 			isa = PBXGroup;
 			children = (
+				AD4C807A1A58C8FA006E150A /* CoreLocation.framework */,
 				ADF128C61A573DBC0028E278 /* Khaki */,
 				ADF128E01A573DBC0028E278 /* KhakiTests */,
 				ADF128C51A573DBC0028E278 /* Products */,
@@ -414,6 +416,7 @@
 				ADF128E91A573DBC0028E278 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		ADF128EA1A573DBC0028E278 /* Build configuration list for PBXNativeTarget "KhakiTests" */ = {
 			isa = XCConfigurationList;
@@ -422,6 +425,7 @@
 				ADF128EC1A573DBC0028E278 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

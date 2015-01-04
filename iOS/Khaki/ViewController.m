@@ -18,11 +18,20 @@
     [super viewDidLoad];
     
     // Initiate CBCentralManager
-    self.centralManager = [[CBCentralManager alloc] initWithDelegate:self
-                                                               queue:nil
-                                                             options:@{
-                                                                       CBCentralManagerOptionRestoreIdentifierKey: @"KhakiCentral"
-                                                                       }];
+    self.centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil options:@{ CBCentralManagerOptionRestoreIdentifierKey: @"KhakiCentral" }];
+    
+    // Initiate CCLocationManager
+    self.locationManager = [[CLLocationManager alloc] init];
+    self.locationManager.delegate = self;
+    if ([self.locationManager respondsToSelector:@selector(requestAlwaysAuthorization)]) {
+        [self.locationManager requestAlwaysAuthorization];
+    }
+    
+    // Initiate CLBeaconRegion
+    NSLog(@"Looking for beacon: %@", KHAKI_BEACON_UUID);
+    self.beaconRegion = [[CLBeaconRegion alloc] initWithProximityUUID:KHAKI_BEACON_UUID identifier:@"com.mintcode.beacon"];
+    self.beaconRegion.notifyEntryStateOnDisplay = YES;
+    [self.locationManager startMonitoringForRegion:self.beaconRegion];
 }
 
 - (void)didReceiveMemoryWarning {
@@ -37,63 +46,14 @@
     
     if ([central state] == CBCentralManagerStatePoweredOn) {
         NSLog(@"CoreBluetooth BLE hardware is powered on");
+        self.connectedLabel.text = @"Powered On";
         
-        // Start scanning for services
-        [self.centralManager scanForPeripheralsWithServices:@[KHAKI_SERVICE_UUID] options:nil];
-        
-        if (self.peripheral) {
-            NSLog(@"Already have a peripheral");
-            if (self.peripheral.state == CBPeripheralStateConnected) {
-                
-                // Check if we have discovered the service
-                NSUInteger serviceIdx = [self.peripheral.services indexOfObjectPassingTest:^BOOL(CBService *obj, NSUInteger idx, BOOL *stop) {
-                    return [obj.UUID isEqual:KHAKI_SERVICE_UUID];
-                }];
-                
-                if (serviceIdx == NSNotFound) {
-                    // We haven't discovered all the services yet
-                    [self.peripheral discoverServices:@[KHAKI_SERVICE_UUID]];
-                    return;
-                }
-                
-                CBService *service = self.peripheral.services[serviceIdx];
-                
-                // Check if we have discovered the car characteristic
-                NSUInteger carCharIdx = [service.characteristics indexOfObjectPassingTest:^BOOL(CBCharacteristic *obj, NSUInteger idx, BOOL *stop) {
-                    return [obj.UUID isEqual:KHAKI_CAR_CHARACTERISTIC_UUID];
-                }];
-                
-                // Check if we have discovered the car characteristic
-                NSUInteger authCharIdx = [service.characteristics indexOfObjectPassingTest:^BOOL(CBCharacteristic *obj, NSUInteger idx, BOOL *stop) {
-                    return [obj.UUID isEqual:KHAKI_AUTH_CHARACTERISTIC_UUID];
-                }];
-                
-                // Build an array of services that we haven't got yet
-                NSMutableArray *services = [[NSMutableArray alloc] init];
-                
-                if (carCharIdx == NSNotFound) {
-                    [services addObject:KHAKI_CAR_CHARACTERISTIC_UUID];
-                } else {
-                    self.carCharacteristic = service.characteristics[carCharIdx];
-                }
-                
-                if (authCharIdx == NSNotFound) {
-                    [services addObject:KHAKI_AUTH_CHARACTERISTIC_UUID];
-                } else {
-                    self.authCharacteristic = service.characteristics[authCharIdx];
-                }
-                
-                if ([services count] > 0) {
-                    // We haven't discovered all the characteristic yet!
-                    [self.peripheral discoverCharacteristics:services forService:service];
-                    return;
-                }
-                
-            }
-        }
+        [self connectOrScan];
         
     } else {
         NSLog(@"CoreBluetooth BLE hardware is powered off");
+        self.connectedLabel.text = @"Powered Off";
+        
         self.peripheral = nil;
         self.carCharacteristic = nil;
         self.authCharacteristic = nil;
@@ -110,14 +70,13 @@
     if ([peripherals count] > 0) {
         self.peripheral = peripherals[0];
         self.peripheral.delegate = self;
+        self.peripheralUUID = self.peripheral.identifier;
     }
 }
 
 // Called when a bluetooth peripheral is discovered
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI {
-    
-    NSLog(@"Found Peripheral: %@", peripheral);
-    NSLog(@"Advertisement: %@", advertisementData);
+    NSLog(@"Found Peripheral");
     
     [self.centralManager stopScan];
     self.peripheral = peripheral;
@@ -127,25 +86,28 @@
 
 // Called when a bluetooth peripheral is connected to
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
+    NSLog(@"Connected to peripheral");
     self.connectedLabel.text = @"Connected";
     
-    [peripheral setDelegate:self];
-    [peripheral discoverServices:@[KHAKI_SERVICE_UUID]];
+    self.peripheral = peripheral;
+    self.peripheral.delegate = self;
+    [self.peripheral discoverServices:@[KHAKI_SERVICE_UUID]];
 }
 
 // Called when a peripheral cannot be connected
 - (void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
     NSLog(@"Failed to connect to peripheral %@ (%@)", peripheral, error);
+    self.connectedLabel.text = @"Failed To Connect";
 }
 
 // Called when a bluetooth peripheral is disconnected
 - (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
     NSLog(@"Disconnected peripheral %@ (%@)", peripheral, error);
+    self.connectedLabel.text = [NSString stringWithFormat:@"Not Connected: %@", error];
     
-    self.connectedLabel.text = @"Not Connected";
-    
-    // Maybe try scanning again?
-    [self.centralManager scanForPeripheralsWithServices:@[KHAKI_SERVICE_UUID] options:nil];
+    if (self.isInside) {
+        [self connectOrScan];
+    }
 }
 
 #pragma mark - CBPeripheralDelegate
@@ -192,6 +154,37 @@
     }
 }
 
+#pragma mark - CLLocationManagerDelegate
+
+// Called when we move inside/outside the region, or when the user wakes up the phone
+- (void)locationManager:(CLLocationManager *)manager didDetermineState:(CLRegionState)state forRegion:(CLRegion *)region {
+    if (state == CLRegionStateInside) {
+        self.isInside = YES;
+        self.iBeaconLabel.text = @"INSIDE";
+        [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
+        [self connectOrScan];
+    }
+    else if (state == CLRegionStateOutside) {
+        NSLog(@"OUTSIDE");
+        self.isInside = NO;
+        self.iBeaconLabel.text = @"OUTSIDE";
+        [self.locationManager stopRangingBeaconsInRegion:self.beaconRegion];
+        [self.centralManager stopScan];
+    }
+    else {
+        NSLog(@"OTHER");
+        self.iBeaconLabel.text = @"OTHER";
+        
+    }
+}
+
+// Called when we get a range update
+- (void)locationManager:(CLLocationManager *)manager didRangeBeacons:(NSArray *)beacons inRegion:(CLBeaconRegion *)region {
+    for (CLBeacon *beacon in beacons) {
+        self.iBeaconLabel.text = [NSString stringWithFormat:@"prox %ld :: acc %a :: rssi %ld", (long) beacon.proximity, beacon.accuracy, (long) beacon.rssi];
+    }
+}
+
 #pragma mark - Buttons
 
 - (IBAction)tapUnlockButton:(id)sender {
@@ -199,6 +192,96 @@
 }
 
 #pragma mark - Khaki methods
+
+- (void)connectOrScan {
+    
+    NSLog(@"Connect/Scan started");
+    
+    if (self.peripheral && self.peripheral.state == CBPeripheralStateConnected) {
+        
+        NSLog(@"Already connected to a peripheral");
+        
+        // Check if we have discovered the service
+        NSUInteger serviceIdx = [self.peripheral.services indexOfObjectPassingTest:^BOOL(CBService *obj, NSUInteger idx, BOOL *stop) {
+            return [obj.UUID isEqual:KHAKI_SERVICE_UUID];
+        }];
+        
+        if (serviceIdx == NSNotFound) {
+            // We haven't discovered all the services yet
+            NSLog(@"Have not yet discovered services");
+            [self.peripheral discoverServices:@[KHAKI_SERVICE_UUID]];
+            return;
+        }
+        
+        CBService *service = self.peripheral.services[serviceIdx];
+        
+        // Check if we have discovered the car characteristic
+        NSUInteger carCharIdx = [service.characteristics indexOfObjectPassingTest:^BOOL(CBCharacteristic *obj, NSUInteger idx, BOOL *stop) {
+            return [obj.UUID isEqual:KHAKI_CAR_CHARACTERISTIC_UUID];
+        }];
+        
+        // Check if we have discovered the car characteristic
+        NSUInteger authCharIdx = [service.characteristics indexOfObjectPassingTest:^BOOL(CBCharacteristic *obj, NSUInteger idx, BOOL *stop) {
+            return [obj.UUID isEqual:KHAKI_AUTH_CHARACTERISTIC_UUID];
+        }];
+        
+        // Build an array of services that we haven't got yet
+        NSMutableArray *services = [[NSMutableArray alloc] init];
+        
+        if (carCharIdx == NSNotFound) {
+            NSLog(@"Have not yet discovered car characteristic");
+            [services addObject:KHAKI_CAR_CHARACTERISTIC_UUID];
+        } else {
+            self.carCharacteristic = service.characteristics[carCharIdx];
+        }
+        
+        if (authCharIdx == NSNotFound) {
+            NSLog(@"Have not yet discovered auth characteristic");
+            [services addObject:KHAKI_AUTH_CHARACTERISTIC_UUID];
+        } else {
+            self.authCharacteristic = service.characteristics[authCharIdx];
+        }
+        
+        if ([services count] > 0) {
+            // We haven't discovered all the characteristic yet!
+            [self.peripheral discoverCharacteristics:services forService:service];
+            return;
+        }
+        
+        NSLog(@"Already discovered services successfully");
+        return;
+    }
+    
+    // If we have previously connected to a device, then we will have it's UUID.
+    if (self.peripheralUUID) {
+        NSLog(@"Using self.peripheralUUID: %@", self.peripheralUUID);
+        
+        NSArray *peripherals = [self.centralManager retrievePeripheralsWithIdentifiers:@[self.peripheralUUID]];
+        if ([peripherals count] > 0) {
+            
+            NSLog(@"Found a peripheral, trying to connect to it");
+            [self.centralManager connectPeripheral:peripherals[0] options:nil];
+            
+            // TODO: If we can't connect, then we need to do a scan
+            return;
+        }
+        
+    }
+    
+    // Check if are are already connected to it
+    NSLog(@"Checking connected peripherals");
+    NSArray *peripherals = [self.centralManager retrieveConnectedPeripheralsWithServices:@[KHAKI_SERVICE_UUID]];
+    if ([peripherals count] > 0) {
+        NSLog(@"Found a connected peripheral");
+        [self.centralManager connectPeripheral:peripherals[0] options:nil];
+        return;
+    }
+    
+    // Start scanning for services
+    NSLog(@"Running a scan");
+    self.connectedLabel.text = @"Scanning...";
+    [self.centralManager scanForPeripheralsWithServices:@[KHAKI_SERVICE_UUID] options:nil];
+}
 
 - (void)authenticate:(CBCharacteristic *)characteristic {
     
