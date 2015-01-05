@@ -41,10 +41,10 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 	// Pull the lever, Kronk!
 
 	if data[0] == LOCK_CAR {
-		fmt.Println("Locking car")
+		fmt.Println("--- Locking car")
 		c.Lock()
 	} else if data[0] == UNLOCK_CAR {
-		fmt.Println("Unlocking car")
+		fmt.Println("+++ Unlocking car")
 		c.Unlock()
 	}
 
@@ -53,20 +53,20 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 
 func (c Car) Unlock() {
 	mu.Lock()
-	if c.isLocked == true {
-		fmt.Println("Setting LED")
-		c.Pin.Set()
-		c.isLocked = false
-	}
+	// if c.isLocked == true {
+	fmt.Println("Setting LED")
+	c.Pin.Set()
+	c.isLocked = false
+	// }
 	mu.Unlock()
 }
 
 func (c Car) Lock() {
 	mu.Lock()
-	if c.isLocked == false {
-		fmt.Println("Clearing LED")
-		c.Pin.Clear()
-		c.isLocked = true
-	}
+	// if c.isLocked == false {
+	fmt.Println("Clearing LED")
+	c.Pin.Clear()
+	c.isLocked = true
+	// }
 	mu.Unlock()
 }
