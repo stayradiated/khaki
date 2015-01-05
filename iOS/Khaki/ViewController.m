@@ -105,7 +105,7 @@
     NSLog(@"Disconnected peripheral %@ (%@)", peripheral, error);
     self.connectedLabel.text = [NSString stringWithFormat:@"Not Connected: %@", error];
     
-    if (self.isInside) {
+    if (self.isInsideRegion) {
         [self connectOrScan];
     }
 }
@@ -159,14 +159,14 @@
 // Called when we move inside/outside the region, or when the user wakes up the phone
 - (void)locationManager:(CLLocationManager *)manager didDetermineState:(CLRegionState)state forRegion:(CLRegion *)region {
     if (state == CLRegionStateInside) {
-        self.isInside = YES;
+        self.isInsideRegion = YES;
         self.iBeaconLabel.text = @"INSIDE";
         [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
         [self connectOrScan];
     }
     else if (state == CLRegionStateOutside) {
         NSLog(@"OUTSIDE");
-        self.isInside = NO;
+        self.isInsideRegion = NO;
         self.iBeaconLabel.text = @"OUTSIDE";
         [self.locationManager stopRangingBeaconsInRegion:self.beaconRegion];
         [self.centralManager stopScan];
@@ -315,17 +315,23 @@
 }
 
 - (void)unlock {
-    NSLog(@"Unlocking car");
-    const unsigned char bytes[] = {1};
-    NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-    [self updateCarStatus:data];
+    if (self.isLocked) {
+        NSLog(@"Unlocking car");
+        self.isLocked = false;
+        const unsigned char bytes[] = {1};
+        NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
+        [self updateCarStatus:data];
+    }
 }
 
 - (void)lock {
-    NSLog(@"Locking car");
-    const unsigned char bytes[] = {2};
-    NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-    [self updateCarStatus:data];
+    if (! self.isLocked) {
+        NSLog(@"Locking car");
+        self.isLocked = true;
+        const unsigned char bytes[] = {2};
+        NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
+        [self updateCarStatus:data];
+    }
 }
 
 - (void)updateCarStatus:(NSData *)data {

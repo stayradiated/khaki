@@ -23,7 +23,8 @@
 @property (nonatomic, strong) CBPeripheral *peripheral;
 @property (nonatomic, strong) NSUUID *peripheralUUID;
 
-@property (nonatomic) BOOL isInside;
+@property (nonatomic) BOOL isInsideRegion;
+@property (nonatomic) BOOL isLocked;
 
 @property (nonatomic, strong) CLLocationManager *locationManager;
 @property (nonatomic, strong) CLBeaconRegion *beaconRegion;
