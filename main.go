@@ -86,4 +86,5 @@ func HandleConnect(conn gatt.Conn) {
 
 func HandleDisconnect(conn gatt.Conn) {
 	fmt.Println("Lost connection", conn)
+	car.Lock()
 }

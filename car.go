@@ -30,24 +30,31 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 		return gatt.StatusUnexpectedError
 	}
 
-	// don't do anything if the state already matches the request
-	if len(data) != 1 ||
-		(c.isLocked && data[0] == LOCK_CAR) ||
-		(!c.isLocked && data[0] == UNLOCK_CAR) {
-		return gatt.StatusSuccess
+	if len(data) < 1 {
+		fmt.Println("Invalid data")
+		return gatt.StatusUnexpectedError
 	}
 
 	// Pull the lever, Kronk!
 	switch data[0] {
 	case LOCK_CAR:
-		c.Pin.Set()
-		c.isLocked = true
+		c.Lock()
 		break
 	case UNLOCK_CAR:
-		c.Pin.Clear()
-		c.isLocked = false
+		c.Unlock()
+		break
 		break
 	}
 
 	return gatt.StatusSuccess
+}
+
+func (c Car) Unlock() {
+	c.Pin.Set()
+	c.isLocked = true
+}
+
+func (c Car) Lock() {
+	c.Pin.Clear()
+	c.isLocked = false
 }
