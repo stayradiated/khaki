@@ -27,8 +27,7 @@
                                 <fontDescription key="fontDescription" name="HelveticaNeue-Bold" family="Helvetica Neue" pointSize="15"/>
                                 <state key="normal" title="Lock"/>
                                 <connections>
-                                    <action selector="tapLockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="8Tn-f8-cMQ"/>
-                                    <action selector="tapUnlockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="n2b-XO-Eg9"/>
+                                    <action selector="tapLockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="cLh-OY-bDs"/>
                                 </connections>
                             </button>
                             <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" text="Khaki" textAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="v60-yN-a0G">
@@ -51,7 +50,7 @@
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
-                                    <action selector="tapUnlockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="R6n-aU-ihc"/>
+                                    <action selector="tapUnlockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Ln2-ok-ibH"/>
                                 </connections>
                             </button>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Cannot See iBeacon" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="1Db-91-roT">

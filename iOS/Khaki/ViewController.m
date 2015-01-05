@@ -183,10 +183,10 @@
     for (CLBeacon *beacon in beacons) {
         self.iBeaconLabel.text = [NSString stringWithFormat:@"Prox: %ld -- RSSI: %ld", (long) beacon.proximity, (long) beacon.rssi];
         
-        if (beacon.proximity == CLProximityNear) {
-            [self lock];
-        } else {
+        if (beacon.proximity <= CLProximityNear) {
             [self unlock];
+        } else {
+            [self lock];
         }
     }
 }
@@ -194,10 +194,12 @@
 #pragma mark - Buttons
 
 - (IBAction)tapLockButton:(id)sender {
+    NSLog(@"Tapping Lock Button");
     [self lock];
 }
 
 - (IBAction)tapUnlockButton:(id)sender {
+    NSLog(@"Tapping Unlock Button");
     [self unlock];
 }
 
@@ -313,12 +315,14 @@
 }
 
 - (void)unlock {
+    NSLog(@"Unlocking car");
     const unsigned char bytes[] = {1};
     NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
     [self updateCarStatus:data];
 }
 
 - (void)lock {
+    NSLog(@"Locking car");
     const unsigned char bytes[] = {2};
     NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
     [self updateCarStatus:data];
