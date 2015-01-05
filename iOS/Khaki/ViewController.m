@@ -181,7 +181,7 @@
 // Called when we get a range update
 - (void)locationManager:(CLLocationManager *)manager didRangeBeacons:(NSArray *)beacons inRegion:(CLBeaconRegion *)region {
     for (CLBeacon *beacon in beacons) {
-        self.iBeaconLabel.text = [NSString stringWithFormat:@"prox %ld :: acc %a :: rssi %ld", (long) beacon.proximity, beacon.accuracy, (long) beacon.rssi];
+        self.iBeaconLabel.text = [NSString stringWithFormat:@"prox %ld :: acc %a :: rssi %ld", (long) [beacon proximity], [beacon accuracy], (long) [beacon rssi]];
     }
 }
 
