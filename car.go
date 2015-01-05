@@ -36,15 +36,13 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 	}
 
 	// Pull the lever, Kronk!
-	switch data[0] {
-	case LOCK_CAR:
+
+	if data[0] == LOCK_CAR {
 		fmt.Println("Locking car")
 		c.Lock()
-		break
-	case UNLOCK_CAR:
+	} else if data[0] == UNLOCK_CAR {
 		fmt.Println("Unlocking car")
 		c.Unlock()
-		break
 	}
 
 	return gatt.StatusSuccess
