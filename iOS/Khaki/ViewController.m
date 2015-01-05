@@ -181,11 +181,21 @@
 // Called when we get a range update
 - (void)locationManager:(CLLocationManager *)manager didRangeBeacons:(NSArray *)beacons inRegion:(CLBeaconRegion *)region {
     for (CLBeacon *beacon in beacons) {
-        self.iBeaconLabel.text = [NSString stringWithFormat:@"prox %ld :: acc %a :: rssi %ld", (long) [beacon proximity], [beacon accuracy], (long) [beacon rssi]];
+        self.iBeaconLabel.text = [NSString stringWithFormat:@"Prox: %ld -- RSSI: %ld", (long) beacon.proximity, (long) beacon.rssi];
+        
+        if (beacon.proximity == CLProximityNear) {
+            [self lock];
+        } else {
+            [self unlock];
+        }
     }
 }
 
 #pragma mark - Buttons
+
+- (IBAction)tapLockButton:(id)sender {
+    [self lock];
+}
 
 - (IBAction)tapUnlockButton:(id)sender {
     [self unlock];
@@ -303,13 +313,22 @@
 }
 
 - (void)unlock {
-    
-    if (self.peripheral == nil || self.carCharacteristic == nil) {
-        NSLog(@"Not yet connected...");
-    }
-    
+    const unsigned char bytes[] = {1};
+    NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
+    [self updateCarStatus:data];
+}
+
+- (void)lock {
     const unsigned char bytes[] = {2};
     NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
+    [self updateCarStatus:data];
+}
+
+- (void)updateCarStatus:(NSData *)data {
+    if (self.peripheral == nil || self.carCharacteristic == nil) {
+        NSLog(@"Not yet connected...");
+        return;
+    }
     
     [self.peripheral writeValue:data forCharacteristic:self.carCharacteristic type:CBCharacteristicWriteWithoutResponse];
 }

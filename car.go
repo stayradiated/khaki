@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/davecheney/gpio"
 	"github.com/paypal/gatt"
@@ -38,13 +37,17 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 		return gatt.StatusSuccess
 	}
 
-	// pull the level kronk!
-	go func() {
+	// Pull the lever, Kronk!
+	switch data[0] {
+	case LOCK_CAR:
 		c.Pin.Set()
-		time.Sleep(100 * time.Millisecond)
+		c.isLocked = true
+		break
+	case UNLOCK_CAR:
 		c.Pin.Clear()
-		c.isLocked = (data[0] == LOCK_CAR)
-	}()
+		c.isLocked = false
+		break
+	}
 
 	return gatt.StatusSuccess
 }

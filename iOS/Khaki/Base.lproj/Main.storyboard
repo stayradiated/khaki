@@ -18,45 +18,64 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="wcy-CF-SGG">
-                                <rect key="frame" x="175" y="250" width="250" height="99"/>
+                                <rect key="frame" x="175" y="126" width="250" height="62"/>
                                 <color key="backgroundColor" red="0.95283071873393999" green="0.9757587066291753" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                                 <constraints>
-                                    <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="99" id="F0v-n5-QhS"/>
-                                    <constraint firstAttribute="width" constant="250" id="pna-7c-r0P"/>
+                                    <constraint firstAttribute="height" constant="62" id="uEr-ka-rEW"/>
+                                    <constraint firstAttribute="width" constant="250" id="xCY-3G-dxN"/>
                                 </constraints>
+                                <fontDescription key="fontDescription" name="HelveticaNeue-Bold" family="Helvetica Neue" pointSize="15"/>
+                                <state key="normal" title="Lock"/>
+                                <connections>
+                                    <action selector="tapLockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="8Tn-f8-cMQ"/>
+                                    <action selector="tapUnlockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="n2b-XO-Eg9"/>
+                                </connections>
+                            </button>
+                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" text="Khaki" textAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="v60-yN-a0G">
+                                <rect key="frame" x="16" y="20" width="568" height="98"/>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="98" id="ckn-kz-BHD"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
+                            </textView>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="yF3-EC-eSU">
+                                <rect key="frame" x="175" y="196" width="250" height="62"/>
+                                <color key="backgroundColor" red="0.95283071870000002" green="0.97575870659999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="62" id="1Xa-2e-Sha"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
                                 <state key="normal" title="Unlock">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
-                                    <action selector="tapUnlockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="n2b-XO-Eg9"/>
+                                    <action selector="tapUnlockButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="R6n-aU-ihc"/>
                                 </connections>
                             </button>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Cannot See iBeacon" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="1Db-91-roT">
-                                <rect key="frame" x="221" y="502" width="158" height="50"/>
+                                <rect key="frame" x="221" y="530" width="158" height="50"/>
                                 <constraints>
-                                    <constraint firstAttribute="height" constant="50" id="Pia-LP-5i7"/>
+                                    <constraint firstAttribute="height" constant="50" id="WuA-58-ETt"/>
                                 </constraints>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" text="Khaki" textAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="v60-yN-a0G">
-                                <rect key="frame" x="16" y="20" width="568" height="222"/>
-                                <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
-                                <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
-                            </textView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
-                            <constraint firstItem="v60-yN-a0G" firstAttribute="centerX" secondItem="wcy-CF-SGG" secondAttribute="centerX" id="0vA-nV-lpO"/>
-                            <constraint firstAttribute="centerX" secondItem="1Db-91-roT" secondAttribute="centerX" id="AU5-ed-vae"/>
-                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="1Db-91-roT" secondAttribute="bottom" constant="48" id="Dce-Ru-pbj"/>
-                            <constraint firstItem="wcy-CF-SGG" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="T8q-sH-9Xs"/>
-                            <constraint firstItem="wcy-CF-SGG" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="WYO-m9-VNQ"/>
-                            <constraint firstItem="v60-yN-a0G" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" id="gqw-zE-Sz0"/>
-                            <constraint firstItem="v60-yN-a0G" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" id="nzM-Jm-CyD"/>
-                            <constraint firstItem="wcy-CF-SGG" firstAttribute="top" secondItem="v60-yN-a0G" secondAttribute="bottom" constant="8" symbolic="YES" id="sDg-hS-80g"/>
+                            <constraint firstItem="v60-yN-a0G" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" id="3y8-QY-wbr"/>
+                            <constraint firstItem="yF3-EC-eSU" firstAttribute="centerX" secondItem="1Db-91-roT" secondAttribute="centerX" id="AVs-Ba-kXn"/>
+                            <constraint firstItem="1Db-91-roT" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="Hsm-dQ-Ede"/>
+                            <constraint firstItem="wcy-CF-SGG" firstAttribute="centerX" secondItem="v60-yN-a0G" secondAttribute="centerX" id="WSb-mX-7nj"/>
+                            <constraint firstItem="v60-yN-a0G" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" id="cy9-AA-lo8"/>
+                            <constraint firstAttribute="bottom" secondItem="1Db-91-roT" secondAttribute="bottom" constant="20" symbolic="YES" id="dxr-Pr-wvG"/>
+                            <constraint firstItem="wcy-CF-SGG" firstAttribute="trailing" secondItem="yF3-EC-eSU" secondAttribute="trailing" id="eQR-1R-aNY"/>
+                            <constraint firstItem="yF3-EC-eSU" firstAttribute="top" secondItem="wcy-CF-SGG" secondAttribute="bottom" constant="8" symbolic="YES" id="emv-ca-VcH"/>
+                            <constraint firstItem="wcy-CF-SGG" firstAttribute="top" secondItem="v60-yN-a0G" secondAttribute="bottom" constant="8" symbolic="YES" id="lcP-F0-ZuF"/>
+                            <constraint firstItem="yF3-EC-eSU" firstAttribute="leading" secondItem="wcy-CF-SGG" secondAttribute="leading" id="r33-dY-qpj"/>
                         </constraints>
                     </view>
                     <connections>
