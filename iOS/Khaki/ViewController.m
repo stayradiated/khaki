@@ -183,7 +183,8 @@
     for (CLBeacon *beacon in beacons) {
         self.iBeaconLabel.text = [NSString stringWithFormat:@"Prox: %ld -- RSSI: %ld", (long) beacon.proximity, (long) beacon.rssi];
         
-        if (beacon.proximity <= CLProximityNear) {
+        // if (beacon.proximity <= CLProximityNear) {
+        if (beacon.rssi > -60) {
             [self unlock];
         } else {
             [self lock];
@@ -317,32 +318,36 @@
 - (void)unlock {
     if (self.isLocked) {
         NSLog(@"Unlocking car");
-        self.isLocked = false;
-        self.connectedLabel.backgroundColor = [UIColor blueColor];
         const unsigned char bytes[] = {1};
         NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-        [self updateCarStatus:data];
+        if ([self updateCarStatus:data]) {
+            self.isLocked = false;
+            self.connectedLabel.backgroundColor = [UIColor blueColor];
+        }
     }
 }
 
 - (void)lock {
     if (! self.isLocked) {
         NSLog(@"Locking car");
-        self.isLocked = true;
-        self.connectedLabel.backgroundColor = [UIColor redColor];
         const unsigned char bytes[] = {2};
         NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-        [self updateCarStatus:data];
+        if ([self updateCarStatus:data]) {
+            self.isLocked = true;
+            self.connectedLabel.backgroundColor = [UIColor redColor];
+        }
     }
 }
 
-- (void)updateCarStatus:(NSData *)data {
+- (BOOL)updateCarStatus:(NSData *)data {
     if (self.peripheral == nil || self.carCharacteristic == nil) {
         NSLog(@"Not yet connected...");
-        return;
+        return NO;
     }
     
     [self.peripheral writeValue:data forCharacteristic:self.carCharacteristic type:CBCharacteristicWriteWithoutResponse];
+    
+    return YES;
 }
 
 @end
