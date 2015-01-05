@@ -53,13 +53,13 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 func (c Car) Unlock() {
 	if c.isLocked {
 		c.Pin.Set()
-		c.isLocked = true
+		c.isLocked = false
 	}
 }
 
 func (c Car) Lock() {
 	if !c.isLocked {
 		c.Pin.Clear()
-		c.isLocked = false
+		c.isLocked = true
 	}
 }
