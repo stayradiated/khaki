@@ -18,7 +18,7 @@ type Car struct {
 
 func NewCar(pin gpio.Pin, auth *Auth) *Car {
 	return &Car{
-		isLocked: false,
+		isLocked: true,
 		Pin:      pin,
 		Auth:     auth,
 	}
@@ -51,14 +51,16 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 }
 
 func (c Car) Unlock() {
-	if c.isLocked {
+	if c.isLocked == true {
+		fmt.Println("Setting LED")
 		c.Pin.Set()
 		c.isLocked = false
 	}
 }
 
 func (c Car) Lock() {
-	if !c.isLocked {
+	if c.isLocked == false {
+		fmt.Println("Clearing LED")
 		c.Pin.Clear()
 		c.isLocked = true
 	}

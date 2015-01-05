@@ -318,6 +318,7 @@
     if (self.isLocked) {
         NSLog(@"Unlocking car");
         self.isLocked = false;
+        self.connectedLabel.backgroundColor = [UIColor blueColor];
         const unsigned char bytes[] = {1};
         NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
         [self updateCarStatus:data];
@@ -328,6 +329,7 @@
     if (! self.isLocked) {
         NSLog(@"Locking car");
         self.isLocked = true;
+        self.connectedLabel.backgroundColor = [UIColor redColor];
         const unsigned char bytes[] = {2};
         NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
         [self updateCarStatus:data];
