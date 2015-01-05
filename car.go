@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/davecheney/gpio"
 	"github.com/paypal/gatt"
@@ -9,6 +10,8 @@ import (
 
 const UNLOCK_CAR = 1
 const LOCK_CAR = 2
+
+var mu = &sync.Mutex{}
 
 type Car struct {
 	isLocked bool
@@ -49,17 +52,21 @@ func (c Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 }
 
 func (c Car) Unlock() {
+	mu.Lock()
 	if c.isLocked == true {
 		fmt.Println("Setting LED")
 		c.Pin.Set()
 		c.isLocked = false
 	}
+	mu.Unlock()
 }
 
 func (c Car) Lock() {
+	mu.Lock()
 	if c.isLocked == false {
 		fmt.Println("Clearing LED")
 		c.Pin.Clear()
 		c.isLocked = true
 	}
+	mu.Unlock()
 }
