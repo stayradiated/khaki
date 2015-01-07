@@ -23,13 +23,15 @@ var car *Car
 // main starts up the BLE server
 func main() {
 
-	packet := NewBeacon(beaconUUID, 0, 0, 0xCD).AdvertisingPacket()
-	fmt.Printf("%x\n", packet)
-
 	iBeacon := gatt.NewServer(
 		gatt.Name("KhakiBeacon"),
 		gatt.HCI(1),
-		gatt.AdvertisingPacket(packet),
+		gatt.AdvertisingPacket(iBeaconPacket(&iBeaconConfig{
+			UUID:  beaconUUID,
+			Major: 0,
+			Minor: 0,
+			Power: 0xCD,
+		})),
 	)
 
 	server := gatt.NewServer(
@@ -58,9 +60,13 @@ func main() {
 	// car characteristic
 	carChar := service.AddCharacteristic(carUUID)
 	carChar.HandleWriteFunc(car.HandleWrite)
+	carChar.HandleNotifyFunc(car.HandleNotify)
 
 	go func() {
-		log.Fatal(iBeacon.AdvertiseAndServe())
+		err := iBeacon.AdvertiseAndServe()
+		if err != nil {
+			log.Println("Could not start iBeacon")
+		}
 	}()
 
 	go func() {
@@ -87,4 +93,5 @@ func HandleConnect(conn gatt.Conn) {
 func HandleDisconnect(conn gatt.Conn) {
 	fmt.Println("Lost connection", conn)
 	car.Lock()
+	auth.Invalidate()
 }

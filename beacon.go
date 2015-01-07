@@ -8,28 +8,18 @@ import (
 
 // Based on https://github.com/izqui/beacon
 
-type Beacon struct {
-	UUID  []byte
+type iBeaconConfig struct {
+	UUID  gatt.UUID
 	Major uint16
 	Minor uint16
 	Power byte
 }
 
-func NewBeacon(uuid gatt.UUID, major uint16, minor uint16, power byte) *Beacon {
-	uuidBytes, err := hex.DecodeString(uuid.String())
+func iBeaconPacket(c *iBeaconConfig) []byte {
+	uuid, err := hex.DecodeString(c.UUID.String())
 	if err != nil {
 		panic("Could not parse UUID")
 	}
-
-	return &Beacon{
-		UUID:  uuidBytes,
-		Major: major,
-		Minor: minor,
-		Power: power,
-	}
-}
-
-func (b Beacon) AdvertisingPacket() []byte {
 
 	packet := []byte{
 		0x02, // Number of bytes that follow in first AD structure
@@ -48,19 +38,19 @@ func (b Beacon) AdvertisingPacket() []byte {
 	}
 
 	// iBeacon UUID
-	packet = append(packet, b.UUID...)
+	packet = append(packet, uuid...)
 
 	packet = append(packet,
 		// iBeacon Major
-		uint8(b.Major>>8),
-		uint8(b.Major&0xff),
+		uint8(c.Major>>8),
+		uint8(c.Major&0xff),
 
 		// iBeacon Minor
-		uint8(b.Minor>>8),
-		uint8(b.Minor&0xff),
+		uint8(c.Minor>>8),
+		uint8(c.Minor&0xff),
 
 		// iBeacon Power
-		b.Power,
+		c.Power,
 	)
 
 	return packet
