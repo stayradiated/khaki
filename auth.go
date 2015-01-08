@@ -11,20 +11,31 @@ import (
 
 type Auth struct {
 	isAuthed  bool
+	public    bool
 	challenge []byte
-	SecretKey []byte
+	Secret    []byte
 }
 
-func NewAuth(secretKey []byte) *Auth {
+type AuthConfig struct {
+	Secret []byte
+	Public bool
+}
+
+func NewAuth(c *AuthConfig) *Auth {
 	return &Auth{
 		challenge: make([]byte, 16),
 		isAuthed:  false,
-		SecretKey: secretKey,
+		public:    c.Public,
+		Secret:    c.Secret,
 	}
 }
 
 func (a Auth) IsAuthenticated() bool {
-	return a.isAuthed
+	if a.public {
+		return true
+	} else {
+		return a.isAuthed
+	}
 }
 
 func (a *Auth) HandleAuthRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
@@ -34,7 +45,7 @@ func (a *Auth) HandleAuthRead(resp gatt.ReadResponseWriter, req *gatt.ReadReques
 }
 
 func (a *Auth) HandleAuthWrite(req gatt.Request, data []byte) (status byte) {
-	mac := hmac.New(sha256.New, a.SecretKey)
+	mac := hmac.New(sha256.New, a.Secret)
 	mac.Write(a.challenge)
 	expectedMac := mac.Sum(nil)
 	equal := hmac.Equal(expectedMac, data)

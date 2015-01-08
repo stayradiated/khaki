@@ -5,14 +5,13 @@ import (
 	"os/signal"
 
 	"github.com/davecheney/gpio"
-	"github.com/davecheney/gpio/rpi"
 )
 
 // OpenGPIOPin opens up a GPIO pin
-func OpenGPIOPin() (gpio.Pin, error) {
+func OpenGPIOPin(pinId int) (gpio.Pin, error) {
 
 	// use GPIO25 pin
-	pin, err := gpio.OpenPin(rpi.GPIO25, gpio.ModeOutput)
+	pin, err := gpio.OpenPin(pinId, gpio.ModeOutput)
 	if err != nil {
 		return nil, err
 	}

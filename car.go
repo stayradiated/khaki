@@ -9,25 +9,29 @@ import (
 	"github.com/paypal/gatt"
 )
 
-const UNLOCK_CAR = 1
-const LOCK_CAR = 2
+// These bytes are sent over BLE
+const UNLOCKED byte = 0x01
+const LOCKED byte = 0x02
 
+// Car represents a car
 type Car struct {
 	sync.Mutex
 
-	isLocked bool
-	Pin      gpio.Pin
-	Auth     *Auth
+	Status byte
+	Pin    gpio.Pin
+	Auth   *Auth
 }
 
+// NewCar creates a new instance of the Car type
 func NewCar(pin gpio.Pin, auth *Auth) *Car {
 	return &Car{
-		isLocked: true,
-		Pin:      pin,
-		Auth:     auth,
+		Status: LOCKED,
+		Pin:    pin,
+		Auth:   auth,
 	}
 }
 
+// HandleWrite will lock or unlock the car
 func (c *Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 	if !c.Auth.IsAuthenticated() {
 		fmt.Println("You are not authenticated...")
@@ -40,46 +44,60 @@ func (c *Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 	}
 
 	// Pull the lever, Kronk!
-	if data[0] == LOCK_CAR {
+	switch data[0] {
+	case LOCKED:
 		fmt.Println("--- Locking car")
 		c.Close()
-	} else if data[0] == UNLOCK_CAR {
+		break
+	case UNLOCKED:
 		fmt.Println("+++ Unlocking car")
 		c.Open()
+		break
 	}
 
 	return gatt.StatusSuccess
 }
 
+// HandleRead reports the current status of the car
+func (c *Car) HandleRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
+	c.Lock()
+	resp.Write([]byte{c.Status})
+	c.Unlock()
+}
+
+// HandleNotify sends the current  status of the car to the central every two
+// seconds
 func (c *Car) HandleNotify(r gatt.Request, n gatt.Notifier) {
 	go func() {
-		bytes := []byte{0}
 		for !n.Done() {
-			n.Write(bytes)
-			bytes[0]++
+			c.Lock()
+			n.Write([]byte{c.Status})
+			c.Unlock()
 			time.Sleep(2 * time.Second)
 		}
 	}()
 }
 
+// Open unlocks the car
 func (c *Car) Open() {
 	c.Lock()
-	if c.isLocked == true {
+	if c.Status == LOCKED {
 		if c.Pin != nil {
 			c.Pin.Set()
 		}
-		c.isLocked = false
+		c.Status = UNLOCKED
 	}
 	c.Unlock()
 }
 
+// Close locks the car
 func (c *Car) Close() {
 	c.Lock()
-	if c.isLocked == false {
+	if c.Status == UNLOCKED {
 		if c.Pin != nil {
 			c.Pin.Clear()
 		}
-		c.isLocked = true
+		c.Status = LOCKED
 	}
 	c.Unlock()
 }

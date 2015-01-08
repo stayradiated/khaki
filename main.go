@@ -1,97 +1,37 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"time"
+	"os"
 
-	"github.com/paypal/gatt"
+	"github.com/codegangsta/cli"
 )
 
-// services
-var serviceUUID = gatt.MustParseUUID("54a64ddf-c756-4a1a-bf9d-14f2cac357ad")
-var beaconUUID = gatt.MustParseUUID("a78d9129-b79a-400f-825e-b691661123eb")
-
-// characteristics
-var carUUID = gatt.MustParseUUID("fd1c6fcc-3ca5-48a9-97e9-37f81f5bd9c5")
-var authUUID = gatt.MustParseUUID("66e01614-13d1-40d6-a34f-c5360ba57698")
-
-// objects
-var auth *Auth
-var car *Car
-
-// main starts up the BLE server
 func main() {
+	app := cli.NewApp()
+	app.Name = "khaki"
+	app.Usage = "start the BLE peripheral"
+	app.Version = "0.1.0"
+	app.Author = "George Czabania"
+	app.Email = "george@czabania.com"
 
-	iBeacon := gatt.NewServer(
-		gatt.Name("KhakiBeacon"),
-		gatt.HCI(1),
-		gatt.AdvertisingPacket(iBeaconPacket(&iBeaconConfig{
-			UUID:  beaconUUID,
-			Major: 0,
-			Minor: 0,
-			Power: 0xCD,
-		})),
-	)
-
-	server := gatt.NewServer(
-		gatt.Name("Khaki"),
-		gatt.HCI(0),
-		gatt.Connect(HandleConnect),
-		gatt.Disconnect(HandleDisconnect),
-	)
-	service := server.AddService(serviceUUID)
-
-	// create auth instance
-	auth = NewAuth([]byte("hunter2"))
-
-	// auth characteristic
-	authChar := service.AddCharacteristic(authUUID)
-	authChar.HandleReadFunc(auth.HandleAuthRead)
-	authChar.HandleWriteFunc(auth.HandleAuthWrite)
-
-	// create car instance
-	gpioPin, err := OpenGPIOPin()
-	if err != nil {
-		log.Println("Could not open GPIO pin")
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "secret",
+			Value: "hunter2",
+			Usage: "secret key used to authenticate clients",
+		},
+		cli.BoolFlag{
+			Name:  "public",
+			Usage: "disable authentication (useful when debugging)",
+		},
 	}
-	car = NewCar(gpioPin, auth)
 
-	// car characteristic
-	carChar := service.AddCharacteristic(carUUID)
-	carChar.HandleWriteFunc(car.HandleWrite)
-	carChar.HandleNotifyFunc(car.HandleNotify)
+	app.Action = func(c *cli.Context) {
+		StartPeripheral(&PeripheralConfig{
+			Secret: c.String("secret"),
+			Public: c.Bool("public"),
+		})
+	}
 
-	go func() {
-		err := iBeacon.AdvertiseAndServe()
-		if err != nil {
-			log.Println("Could not start iBeacon")
-		}
-	}()
-
-	go func() {
-		log.Fatal(server.AdvertiseAndServe())
-	}()
-
-	select {}
-}
-
-func HandleConnect(conn gatt.Conn) {
-	fmt.Println("Got connection", conn)
-
-	fmt.Println("You have 5 seconds...")
-
-	go func() {
-		time.Sleep(5 * time.Second)
-		if !auth.IsAuthenticated() {
-			fmt.Println("You have been disconnected")
-			conn.Close()
-		}
-	}()
-}
-
-func HandleDisconnect(conn gatt.Conn) {
-	fmt.Println("Lost connection", conn)
-	car.Lock()
-	auth.Invalidate()
+	app.Run(os.Args)
 }
