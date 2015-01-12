@@ -77,7 +77,7 @@ func (c *Car) HandleNotify(r gatt.Request, n gatt.Notifier) {
 			c.mu.Unlock()
 
 			n.Write([]byte{status})
-			time.Sleep(2 * time.Second)
+			time.Sleep(10 * time.Second)
 		}
 	}()
 }
