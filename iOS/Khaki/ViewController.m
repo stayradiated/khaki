@@ -82,6 +82,8 @@
     self.peripheral = peripheral;
     self.peripheral.delegate = self;
     [self.centralManager connectPeripheral:self.peripheral options:nil];
+    
+    self.connectedLabel.text = @"Discovered";
 }
 
 // Called when a bluetooth peripheral is connected to
@@ -156,7 +158,7 @@
             
         // Car
         } else if ([characteristic.UUID isEqual:KHAKI_CAR_CHARACTERISTIC_UUID]) {
-            NSLog(@"Car Status: %@", [characteristic value]);
+            [self readCarStatus:characteristic];
         }
     }
 }
@@ -177,11 +179,12 @@
         self.iBeaconLabel.text = @"OUTSIDE";
         [self.locationManager stopRangingBeaconsInRegion:self.beaconRegion];
         [self.centralManager stopScan];
+        
+        self.connectedLabel.text = @"Waiting until in range...";
     }
     else {
         NSLog(@"OTHER");
         self.iBeaconLabel.text = @"OTHER";
-        
     }
 }
 
@@ -191,7 +194,7 @@
         self.iBeaconLabel.text = [NSString stringWithFormat:@"Prox: %ld -- RSSI: %ld", (long) beacon.proximity, (long) beacon.rssi];
         
         // if (beacon.proximity <= CLProximityNear) {
-        if (beacon.rssi > -60) {
+        if (beacon.rssi >= -60 && beacon.rssi < 0) {
             if (self.isLocked) {
                 [self unlock];
             }
@@ -316,10 +319,10 @@
     
     // Hash bytes using HMAC SHA256
     const char *key = [@"hunter2" cStringUsingEncoding:NSASCIIStringEncoding];
-    const char *data = [[characteristic value] bytes];
-    const long dataLength = [[characteristic value] length] / sizeof(char);
+    const char *data = [characteristic.value bytes];
+    const long dataLength = [characteristic.value length] / sizeof(char);
     
-    NSLog(@"Direct data: %@", [characteristic value]);
+    NSLog(@"Direct data: %@", characteristic.value);
     NSLog(@"Data: %@", [NSData dataWithBytes:data length:dataLength]);
     
     unsigned char cHMAC[CC_SHA256_DIGEST_LENGTH];
@@ -335,7 +338,7 @@
     NSLog(@"Unlocking car");
     const unsigned char bytes[] = {1};
     NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-    if ([self updateCarStatus:data]) {
+    if ([self writeCarStatus:data]) {
         self.isLocked = false;
         self.carStatusLabel.text = @"Unlocked";
     }
@@ -345,13 +348,13 @@
     NSLog(@"Locking car");
     const unsigned char bytes[] = {2};
     NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-    if ([self updateCarStatus:data]) {
+    if ([self writeCarStatus:data]) {
         self.isLocked = true;
         self.carStatusLabel.text = @"Locked";
     }
 }
 
-- (BOOL)updateCarStatus:(NSData *)data {
+- (BOOL)writeCarStatus:(NSData *)data {
     if (self.peripheral == nil || self.carCharacteristic == nil) {
         NSLog(@"Not yet connected...");
         return NO;
@@ -361,6 +364,24 @@
     [self.peripheral writeValue:data forCharacteristic:self.carCharacteristic type:CBCharacteristicWriteWithoutResponse];
     
     return YES;
+}
+
+- (BOOL)readCarStatus:(CBCharacteristic *)characteristic {
+    const char *bytes = [characteristic.value bytes];
+    int firstByte = bytes[0];
+    
+    switch (firstByte) {
+        case KHAKI_CAR_LOCKED:
+            self.isLocked = true;
+            break;
+        case KHAKI_CAR_UNLOCKED:
+            self.isLocked = false;
+            break;
+    }
+    
+    NSLog(@"Car is locked: %@", (self.isLocked ? @"YES" : @"NO"));
+    
+    return self.isLocked;
 }
 
 @end
