@@ -133,6 +133,7 @@
             if ([characteristic.UUID isEqual:KHAKI_CAR_CHARACTERISTIC_UUID]) {
                 NSLog(@"Found Khaki Car characteristc");
                 self.carCharacteristic = characteristic;
+                [self.peripheral setNotifyValue:YES forCharacteristic:self.carCharacteristic];
             }
             
             // Auth Characteristic
@@ -148,8 +149,14 @@
 // Called when a value is read from a characteristic
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
     if (! error) {
+        
+        // Auth
         if ([characteristic.UUID isEqual:KHAKI_AUTH_CHARACTERISTIC_UUID]) {
             [self authenticate:characteristic];
+            
+        // Car
+        } else if ([characteristic.UUID isEqual:KHAKI_CAR_CHARACTERISTIC_UUID]) {
+            NSLog(@"Car Status: %@", [characteristic value]);
         }
     }
 }
@@ -185,9 +192,13 @@
         
         // if (beacon.proximity <= CLProximityNear) {
         if (beacon.rssi > -60) {
-            [self unlock];
+            if (self.isLocked) {
+                [self unlock];
+            }
         } else {
-            [self lock];
+            if (! self.isLocked) {
+                [self lock];
+            }
         }
     }
 }
@@ -246,6 +257,11 @@
             [services addObject:KHAKI_CAR_CHARACTERISTIC_UUID];
         } else {
             self.carCharacteristic = service.characteristics[carCharIdx];
+            
+            // Make sure we are subscribed
+            if (! self.carCharacteristic.isNotifying) {
+                [self.peripheral setNotifyValue:YES forCharacteristic:self.carCharacteristic];
+            }
         }
         
         if (authCharIdx == NSNotFound) {
@@ -316,26 +332,22 @@
 }
 
 - (void)unlock {
-    if (self.isLocked) {
-        NSLog(@"Unlocking car");
-        const unsigned char bytes[] = {1};
-        NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-        if ([self updateCarStatus:data]) {
-            self.isLocked = false;
-            self.connectedLabel.backgroundColor = [UIColor blueColor];
-        }
+    NSLog(@"Unlocking car");
+    const unsigned char bytes[] = {1};
+    NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
+    if ([self updateCarStatus:data]) {
+        self.isLocked = false;
+        self.carStatusLabel.text = @"Unlocked";
     }
 }
 
 - (void)lock {
-    if (! self.isLocked) {
-        NSLog(@"Locking car");
-        const unsigned char bytes[] = {2};
-        NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-        if ([self updateCarStatus:data]) {
-            self.isLocked = true;
-            self.connectedLabel.backgroundColor = [UIColor redColor];
-        }
+    NSLog(@"Locking car");
+    const unsigned char bytes[] = {2};
+    NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
+    if ([self updateCarStatus:data]) {
+        self.isLocked = true;
+        self.carStatusLabel.text = @"Locked";
     }
 }
 
@@ -345,6 +357,7 @@
         return NO;
     }
     
+    NSLog(@"Writing %@", data);
     [self.peripheral writeValue:data forCharacteristic:self.carCharacteristic type:CBCharacteristicWriteWithoutResponse];
     
     return YES;

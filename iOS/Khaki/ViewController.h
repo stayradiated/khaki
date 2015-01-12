@@ -34,6 +34,7 @@
 
 @property (weak, nonatomic) IBOutlet UITextView *connectedLabel;
 @property (weak, nonatomic) IBOutlet UILabel *iBeaconLabel;
+@property (weak, nonatomic) IBOutlet UILabel *carStatusLabel;
 
 @end
 
