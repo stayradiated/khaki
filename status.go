@@ -1,28 +1,46 @@
 package main
 
-import "github.com/davecheney/gpio"
+import (
+	"sync"
 
-type Status struct {
-	Connected bool
-	Pin       gpio.Pin
+	"github.com/davecheney/gpio"
+)
+
+type StatusLED struct {
+	Pin gpio.Pin
+
+	mu     sync.Mutex
+	status bool
 }
 
-func (s *Status) Update(connected bool) {
-	s.Connected = connected
-	if s.Connected {
+// Update sets the status of the LED
+func (s *StatusLED) Update(status bool) {
+	s.mu.Lock()
+	s.status = status
+	s.mu.Unlock()
+
+	if status {
 		s.openPin()
 	} else {
 		s.closePin()
 	}
 }
 
-func (s Status) openPin() {
+// openPin turns the pin on
+func (s StatusLED) openPin() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.Pin != nil {
 		s.Pin.Set()
 	}
 }
 
-func (s Status) closePin() {
+// closePin turns the pin off
+func (s StatusLED) closePin() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.Pin != nil {
 		s.Pin.Clear()
 	}

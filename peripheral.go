@@ -9,28 +9,42 @@ import (
 	"github.com/paypal/gatt"
 )
 
-// services
-var serviceUUID = gatt.MustParseUUID("54a64ddf-c756-4a1a-bf9d-14f2cac357ad")
-var beaconUUID = gatt.MustParseUUID("a78d9129-b79a-400f-825e-b691661123eb")
+var (
+	// services
+	serviceUUID = gatt.MustParseUUID("54a64ddf-c756-4a1a-bf9d-14f2cac357ad")
 
-// characteristics
-var carUUID = gatt.MustParseUUID("fd1c6fcc-3ca5-48a9-97e9-37f81f5bd9c5")
-var authUUID = gatt.MustParseUUID("66e01614-13d1-40d6-a34f-c5360ba57698")
+	// characteristics
+	carUUID  = gatt.MustParseUUID("fd1c6fcc-3ca5-48a9-97e9-37f81f5bd9c5")
+	authUUID = gatt.MustParseUUID("66e01614-13d1-40d6-a34f-c5360ba57698")
 
-// objects
-var auth *Auth
-var car *Car
-var status *Status
+	// beacons
+	beaconUUID = gatt.MustParseUUID("a78d9129-b79a-400f-825e-b691661123eb")
+)
 
 type PeripheralConfig struct {
-	Secret string
+	Secret []byte
 	Public bool
 }
 
-// main starts up the BLE server
-func StartPeripheral(c *PeripheralConfig) {
+type Peripheral struct {
+	Beacon *gatt.Server
+	Server *gatt.Server
 
-	iBeacon := gatt.NewServer(
+	Car       *Car
+	Auth      *Auth
+	StatusLED *StatusLED
+}
+
+func NewPeripheral(c *PeripheralConfig) *Peripheral {
+	p := new(Peripheral)
+	p.Init(c)
+	return p
+}
+
+// main starts up the BLE server
+func (p *Peripheral) Init(c *PeripheralConfig) {
+
+	p.Beacon = gatt.NewServer(
 		gatt.Name("KhakiBeacon"),
 		gatt.HCI(1),
 		gatt.AdvertisingPacket(iBeaconPacket(&iBeaconConfig{
@@ -41,72 +55,71 @@ func StartPeripheral(c *PeripheralConfig) {
 		})),
 	)
 
-	server := gatt.NewServer(
+	p.Server = gatt.NewServer(
 		gatt.Name("Khaki"),
 		gatt.HCI(0),
-		gatt.Connect(HandleConnect),
-		gatt.Disconnect(HandleDisconnect),
+		gatt.Connect(p.handleConnect),
+		gatt.Disconnect(p.handleDisconnect),
 	)
-	service := server.AddService(serviceUUID)
+	service := p.Server.AddService(serviceUUID)
 
 	// create status instance
 	gpioPin24, err := OpenGPIOPin(rpi.GPIO24)
 	if err != nil {
 		log.Println("Could not open GPIO pin 24")
 	}
-	status = &Status{
-		Connected: false,
-		Pin:       gpioPin24,
+	p.StatusLED = &StatusLED{
+		Pin: gpioPin24,
 	}
 
 	// create auth instance
-	auth = NewAuth(&AuthConfig{
-		Secret: []byte(c.Secret),
-		Public: c.Public,
-	})
+	p.Auth = NewAuth(c.Secret, c.Public)
 
 	// auth characteristic
 	authChar := service.AddCharacteristic(authUUID)
-	authChar.HandleReadFunc(auth.HandleAuthRead)
-	authChar.HandleWriteFunc(auth.HandleAuthWrite)
+	authChar.HandleReadFunc(p.Auth.HandleRead)
+	authChar.HandleWriteFunc(p.Auth.HandleWrite)
 
 	// create car instance
 	gpioPin25, err := OpenGPIOPin(rpi.GPIO25)
 	if err != nil {
 		log.Println("Could not open GPIO pin 25")
 	}
-	car = NewCar(gpioPin25, auth)
+	p.Car = NewCar(gpioPin25, p.Auth)
 
 	// car characteristic
 	carChar := service.AddCharacteristic(carUUID)
-	carChar.HandleReadFunc(car.HandleRead)
-	carChar.HandleWriteFunc(car.HandleWrite)
-	carChar.HandleNotifyFunc(car.HandleNotify)
+	carChar.HandleReadFunc(p.Car.HandleRead)
+	carChar.HandleWriteFunc(p.Car.HandleWrite)
+	carChar.HandleNotifyFunc(p.Car.HandleNotify)
+}
 
+// Start starts running the BLE servers
+func (p *Peripheral) Start() {
 	go func() {
-		err := iBeacon.AdvertiseAndServe()
+		err := p.Beacon.AdvertiseAndServe()
 		if err != nil {
 			log.Printf("Error with iBeacon: %s\n", err)
 		}
 	}()
 
 	go func() {
-		log.Fatal(server.AdvertiseAndServe())
+		log.Fatal(p.Server.AdvertiseAndServe())
 	}()
 
 	select {}
 }
 
 // HandleConnect is called when a central connects
-func HandleConnect(conn gatt.Conn) {
+func (p *Peripheral) handleConnect(conn gatt.Conn) {
 	fmt.Println("Got connection", conn)
-	status.Update(true)
+	p.StatusLED.Update(true)
 
 	fmt.Println("You have 5 seconds...")
 
 	go func() {
 		time.Sleep(5 * time.Second)
-		if !auth.IsAuthenticated() {
+		if !p.Auth.IsAuthenticated() {
 			fmt.Println("You have been disconnected")
 			conn.Close()
 		}
@@ -114,9 +127,9 @@ func HandleConnect(conn gatt.Conn) {
 }
 
 // HandleDisconnect is called when a connection is lost
-func HandleDisconnect(conn gatt.Conn) {
+func (p *Peripheral) handleDisconnect(conn gatt.Conn) {
 	fmt.Println("Lost connection", conn)
-	car.Lock()
-	auth.Invalidate()
-	status.Update(false)
+	p.Car.Lock()
+	p.Auth.Invalidate()
+	p.StatusLED.Update(false)
 }

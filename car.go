@@ -15,11 +15,11 @@ const LOCKED byte = 0x02
 
 // Car represents a car
 type Car struct {
-	sync.Mutex
+	Auth *Auth
 
+	mu     sync.Mutex
 	Status byte
 	Pin    gpio.Pin
-	Auth   *Auth
 }
 
 // NewCar creates a new instance of the Car type
@@ -47,11 +47,11 @@ func (c *Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 	switch data[0] {
 	case LOCKED:
 		fmt.Println("--- Locking car")
-		c.Close()
+		c.Lock()
 		break
 	case UNLOCKED:
 		fmt.Println("+++ Unlocking car")
-		c.Open()
+		c.Unlock()
 		break
 	}
 
@@ -60,9 +60,11 @@ func (c *Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 
 // HandleRead reports the current status of the car
 func (c *Car) HandleRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
-	c.Lock()
-	resp.Write([]byte{c.Status})
-	c.Unlock()
+	c.mu.Lock()
+	status := c.Status
+	c.mu.Unlock()
+
+	resp.Write([]byte{status})
 }
 
 // HandleNotify sends the current  status of the car to the central every two
@@ -70,34 +72,38 @@ func (c *Car) HandleRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
 func (c *Car) HandleNotify(r gatt.Request, n gatt.Notifier) {
 	go func() {
 		for !n.Done() {
-			c.Lock()
-			n.Write([]byte{c.Status})
-			c.Unlock()
+			c.mu.Lock()
+			status := c.Status
+			c.mu.Unlock()
+
+			n.Write([]byte{status})
 			time.Sleep(2 * time.Second)
 		}
 	}()
 }
 
-// Open unlocks the car
-func (c *Car) Open() {
-	c.Lock()
+// Unlock unlocks the car
+func (c *Car) Unlock() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.Status == LOCKED {
 		if c.Pin != nil {
 			c.Pin.Set()
 		}
 		c.Status = UNLOCKED
 	}
-	c.Unlock()
 }
 
-// Close locks the car
-func (c *Car) Close() {
-	c.Lock()
+// Lock locks the car
+func (c *Car) Lock() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.Status == UNLOCKED {
 		if c.Pin != nil {
 			c.Pin.Clear()
 		}
 		c.Status = LOCKED
 	}
-	c.Unlock()
 }
