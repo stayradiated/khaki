@@ -5,13 +5,14 @@ import (
 	"os/signal"
 
 	"github.com/davecheney/gpio"
+	"github.com/davecheney/gpio/rpi"
 )
 
 // OpenPinForOutput opens up a GPIO pin for output
 func OpenPinForOutput(pinId int) (gpio.Pin, error) {
 
 	// open pin
-	pin, err := gpio.OpenPin(pinId, gpio.ModeOutput)
+	pin, err := rpi.OpenPin(pinId, gpio.ModeOutput)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +35,7 @@ func OpenPinForOutput(pinId int) (gpio.Pin, error) {
 func OpenPinForInput(pinId int) (gpio.Pin, error) {
 
 	// open pin
-	pin, err := gpio.OpenPin(pinId, gpio.ModeInput)
+	pin, err := rpi.OpenPin(pinId, gpio.ModeInput)
 	if err != nil {
 		return nil, err
 	}
