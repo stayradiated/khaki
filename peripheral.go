@@ -102,9 +102,7 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	p.Sensor = &Sensor{
 		Pin: gpioPin23,
 	}
-	p.Sensor.Watch(func() {
-		log.Println("Detected change")
-	})
+	p.Sensor.Watch()
 }
 
 // Start starts running the BLE servers
