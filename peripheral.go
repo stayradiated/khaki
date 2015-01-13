@@ -33,6 +33,7 @@ type Peripheral struct {
 	Car       *Car
 	Auth      *Auth
 	StatusLED *StatusLED
+	Sensor    *Sensor
 }
 
 func NewPeripheral(c *PeripheralConfig) *Peripheral {
@@ -64,7 +65,7 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	service := p.Server.AddService(serviceUUID)
 
 	// create status instance
-	gpioPin24, err := OpenGPIOPin(rpi.GPIO24)
+	gpioPin24, err := OpenPinForOutput(rpi.GPIO24)
 	if err != nil {
 		log.Println("Could not open GPIO pin 24")
 	}
@@ -81,7 +82,7 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	authChar.HandleWriteFunc(p.Auth.HandleWrite)
 
 	// create car instance
-	gpioPin25, err := OpenGPIOPin(rpi.GPIO25)
+	gpioPin25, err := OpenPinForOutput(rpi.GPIO25)
 	if err != nil {
 		log.Println("Could not open GPIO pin 25")
 	}
@@ -92,6 +93,18 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	carChar.HandleReadFunc(p.Car.HandleRead)
 	carChar.HandleWriteFunc(p.Car.HandleWrite)
 	carChar.HandleNotifyFunc(p.Car.HandleNotify)
+
+	// sensor
+	gpioPin23, err := OpenPinForInput(rpi.GPIO23)
+	if err != nil {
+		log.Println("Could not open GPIO pin 23")
+	}
+	p.Sensor = &Sensor{
+		Pin: gpioPin23,
+	}
+	p.Sensor.Watch(func() {
+		log.Println("Detected change")
+	})
 }
 
 // Start starts running the BLE servers
