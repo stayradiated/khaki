@@ -379,7 +379,7 @@
             break;
     }
     
-    NSLog(@"Car is locked: %@", (self.isLocked ? @"YES" : @"NO"));
+    NSLog(@"Car is locked: %x", firstByte);
     
     return self.isLocked;
 }

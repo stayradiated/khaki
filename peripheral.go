@@ -107,6 +107,8 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 		} else {
 			log.Println("Enabling notifications")
 		}
+
+		p.Car.ToggleNotifications(sensor)
 	})
 }
 
