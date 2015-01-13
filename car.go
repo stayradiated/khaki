@@ -1,7 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"io"
+	"log"
+	"strconv"
 	"sync"
 	"time"
 
@@ -11,48 +13,48 @@ import (
 
 // These bytes are sent over BLE
 const UNLOCKED byte = 0x01
-const LOCKED byte = 0x02
+const NOTIFYING byte = 0x02
 
 // Car represents a car
 type Car struct {
 	Auth *Auth
 
-	mu     sync.Mutex
-	Status byte
-	Pin    gpio.Pin
+	mu          sync.Mutex
+	Pin         gpio.Pin
+	isUnlocked  bool
+	isNotifying bool
+	notifier    gatt.Notifier
 }
 
 // NewCar creates a new instance of the Car type
 func NewCar(pin gpio.Pin, auth *Auth) *Car {
 	return &Car{
-		Status: LOCKED,
-		Pin:    pin,
-		Auth:   auth,
+		Pin:         pin,
+		Auth:        auth,
+		isUnlocked:  false,
+		isNotifying: true,
 	}
 }
 
 // HandleWrite will lock or unlock the car
 func (c *Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 	if !c.Auth.IsAuthenticated() {
-		fmt.Println("You are not authenticated...")
+		log.Println("You are not authenticated...")
 		return gatt.StatusUnexpectedError
 	}
 
 	if len(data) < 1 {
-		fmt.Println("Invalid data")
+		log.Println("Invalid data")
 		return gatt.StatusUnexpectedError
 	}
 
 	// Pull the lever, Kronk!
-	switch data[0] {
-	case LOCKED:
-		fmt.Println("--- Locking car")
+	if data[0]&UNLOCKED == 0 {
+		log.Println("--- Locking car")
 		c.Lock()
-		break
-	case UNLOCKED:
-		fmt.Println("+++ Unlocking car")
+	} else {
+		log.Println("+++ Unlocking car")
 		c.Unlock()
-		break
 	}
 
 	return gatt.StatusSuccess
@@ -60,23 +62,27 @@ func (c *Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 
 // HandleRead reports the current status of the car
 func (c *Car) HandleRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
-	c.mu.Lock()
-	status := c.Status
-	c.mu.Unlock()
-
-	resp.Write([]byte{status})
+	c.writeStatus(resp)
 }
 
 // HandleNotify sends the current  status of the car to the central every two
 // seconds
 func (c *Car) HandleNotify(r gatt.Request, n gatt.Notifier) {
+	c.mu.Lock()
+	c.notifier = n
+	c.mu.Unlock()
+
 	go func() {
 		for !n.Done() {
+
 			c.mu.Lock()
-			status := c.Status
+			isNotifying := c.isNotifying
 			c.mu.Unlock()
 
-			n.Write([]byte{status})
+			if isNotifying {
+				c.writeStatus(n)
+			}
+
 			time.Sleep(10 * time.Second)
 		}
 	}()
@@ -87,11 +93,11 @@ func (c *Car) Unlock() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.Status == LOCKED {
+	if !c.isUnlocked {
 		if c.Pin != nil {
 			c.Pin.Set()
 		}
-		c.Status = UNLOCKED
+		c.isUnlocked = true
 	}
 }
 
@@ -100,10 +106,36 @@ func (c *Car) Lock() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.Status == UNLOCKED {
+	if c.isUnlocked {
 		if c.Pin != nil {
 			c.Pin.Clear()
 		}
-		c.Status = LOCKED
+		c.isUnlocked = false
 	}
+}
+
+func (c *Car) ToggleNotifications(status bool) {
+	c.mu.Lock()
+	c.isNotifying = status
+	notifier := c.notifier
+	c.mu.Unlock()
+
+	c.writeStatus(notifier)
+}
+
+func (c *Car) writeStatus(w io.Writer) {
+	status := byte(0)
+
+	c.mu.Lock()
+	if c.isUnlocked {
+		status |= UNLOCKED
+	}
+	if c.isNotifying {
+		status |= NOTIFYING
+	}
+	c.mu.Unlock()
+
+	log.Println(strconv.FormatInt(int64(status), 2))
+
+	w.Write([]byte{status})
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -102,7 +101,13 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	p.Sensor = &Sensor{
 		Pin: gpioPin23,
 	}
-	p.Sensor.Watch()
+	p.Sensor.Watch(func(sensor bool) {
+		if sensor {
+			log.Println("Stopping notifications")
+		} else {
+			log.Println("Enabling notifications")
+		}
+	})
 }
 
 // Start starts running the BLE servers
@@ -123,15 +128,15 @@ func (p *Peripheral) Start() {
 
 // HandleConnect is called when a central connects
 func (p *Peripheral) handleConnect(conn gatt.Conn) {
-	fmt.Println("Got connection", conn)
+	log.Println("Got connection", conn)
 	p.StatusLED.Update(true)
 
-	fmt.Println("You have 5 seconds...")
+	log.Println("You have 5 seconds...")
 
 	go func() {
 		time.Sleep(5 * time.Second)
 		if !p.Auth.IsAuthenticated() {
-			fmt.Println("You have been disconnected")
+			log.Println("You have been disconnected")
 			conn.Close()
 		}
 	}()
@@ -139,7 +144,7 @@ func (p *Peripheral) handleConnect(conn gatt.Conn) {
 
 // HandleDisconnect is called when a connection is lost
 func (p *Peripheral) handleDisconnect(conn gatt.Conn) {
-	fmt.Println("Lost connection", conn)
+	log.Println("Lost connection", conn)
 	p.Car.Lock()
 	p.Auth.Invalidate()
 	p.StatusLED.Update(false)
