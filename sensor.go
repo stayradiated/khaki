@@ -9,9 +9,6 @@ type Sensor struct {
 
 func (s *Sensor) Init() {
 	s.HandleChange(s.Pin.Get())
-}
-
-func (s *Sensor) Watch() {
 	s.Pin.BeginWatch(gpio.EdgeBoth, func() {
 		s.HandleChange(s.Pin.Get())
 	})
