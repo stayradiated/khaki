@@ -120,7 +120,18 @@ func (c *Car) ToggleNotifications(status bool) {
 	notifier := c.notifier
 	c.mu.Unlock()
 
+	if notifier == nil {
+		log.Println("No connection")
+		return
+	}
+
 	c.writeStatus(notifier)
+}
+
+func (c *Car) Reset() {
+	c.mu.Lock()
+	c.notifier = nil
+	c.mu.Unlock()
 }
 
 func (c *Car) writeStatus(w io.Writer) {

@@ -12,8 +12,8 @@
 @import CoreBluetooth;
 @import CoreLocation;
 
-#define KHAKI_CAR_UNLOCKED 0x01
-#define KHAKI_CAR_LOCKED   0x02
+#define KHAKI_UNLOCKED  0x01
+#define KHAKI_NOTIFYING 0x02
 
 #define KHAKI_SERVICE_UUID             [CBUUID UUIDWithString:@"54a64ddf-c756-4a1a-bf9d-14f2cac357ad"]
 #define KHAKI_CAR_CHARACTERISTIC_UUID  [CBUUID UUIDWithString:@"fd1c6fcc-3ca5-48a9-97e9-37f81f5bd9c5"]
@@ -27,7 +27,8 @@
 @property (nonatomic, strong) NSUUID *peripheralUUID;
 
 @property (nonatomic) BOOL isInsideRegion;
-@property (nonatomic) BOOL isLocked;
+@property (nonatomic) BOOL isUnlocked;
+@property (nonatomic) BOOL isRanging;
 
 @property (nonatomic, strong) CLLocationManager *locationManager;
 @property (nonatomic, strong) CLBeaconRegion *beaconRegion;

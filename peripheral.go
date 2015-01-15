@@ -148,6 +148,7 @@ func (p *Peripheral) handleConnect(conn gatt.Conn) {
 func (p *Peripheral) handleDisconnect(conn gatt.Conn) {
 	log.Println("Lost connection", conn)
 	p.Car.Lock()
+	p.Car.Reset()
 	p.Auth.Invalidate()
 	p.StatusLED.Update(false)
 }
