@@ -100,10 +100,11 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	}
 	p.Sensor = &Sensor{
 		Pin: gpioPin23,
+		HandleChange: func(sensor bool) {
+			p.Car.ToggleNotifications(sensor)
+		},
 	}
-	p.Sensor.Watch(func(sensor bool) {
-		p.Car.ToggleNotifications(sensor)
-	})
+	p.Sensor.Init()
 }
 
 // Start starts running the BLE servers

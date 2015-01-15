@@ -3,11 +3,16 @@ package main
 import "github.com/davecheney/gpio"
 
 type Sensor struct {
-	Pin gpio.Pin
+	Pin          gpio.Pin
+	HandleChange func(bool)
 }
 
-func (s *Sensor) Watch(handler func(bool)) {
+func (s *Sensor) Init() {
+	s.HandleChange(s.Pin.Get())
+}
+
+func (s *Sensor) Watch() {
 	s.Pin.BeginWatch(gpio.EdgeBoth, func() {
-		handler(s.Pin.Get())
+		s.HandleChange(s.Pin.Get())
 	})
 }
