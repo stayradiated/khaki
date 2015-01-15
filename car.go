@@ -3,7 +3,6 @@ package main
 import (
 	"io"
 	"log"
-	"strconv"
 	"sync"
 	"time"
 
@@ -152,7 +151,7 @@ func (c *Car) writeStatus(w io.Writer) {
 	}
 	c.mu.Unlock()
 
-	log.Println(strconv.FormatInt(int64(status), 2))
+	log.Printf("%x", status)
 
 	w.Write([]byte{status})
 }
