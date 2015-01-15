@@ -102,12 +102,6 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 		Pin: gpioPin23,
 	}
 	p.Sensor.Watch(func(sensor bool) {
-		if sensor {
-			log.Println("Stopping notifications")
-		} else {
-			log.Println("Enabling notifications")
-		}
-
 		p.Car.ToggleNotifications(sensor)
 	})
 }

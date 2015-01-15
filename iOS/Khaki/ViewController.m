@@ -136,6 +136,7 @@
                 NSLog(@"Found Khaki Car characteristc");
                 self.carCharacteristic = characteristic;
                 [self.peripheral setNotifyValue:YES forCharacteristic:self.carCharacteristic];
+                [self.peripheral readValueForCharacteristic:self.carCharacteristic];
             }
             
             // Auth Characteristic
@@ -335,9 +336,8 @@
 
 - (void)unlock {
     NSLog(@"Unlocking car");
-    const unsigned char bytes[] = {1};
-    NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-    if ([self writeCarStatus:data]) {
+    unsigned char status = 0 | KHAKI_UNLOCKED;
+    if ([self writeCarStatus:status]) {
         self.isUnlocked = true;
         self.carStatusLabel.text = @"Unlocked";
     }
@@ -345,15 +345,17 @@
 
 - (void)lock {
     NSLog(@"Locking car");
-    const unsigned char bytes[] = {2};
-    NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
-    if ([self writeCarStatus:data]) {
+    unsigned char status = 0;
+    if ([self writeCarStatus:status]) {
         self.isUnlocked = false;
         self.carStatusLabel.text = @"Locked";
     }
 }
 
-- (BOOL)writeCarStatus:(NSData *)data {
+- (BOOL)writeCarStatus:(unsigned char)status {
+    const unsigned char bytes[] = {status};
+    NSData *data = [NSData dataWithBytes:bytes length:sizeof(bytes)];
+    
     if (self.peripheral == nil || self.carCharacteristic == nil) {
         NSLog(@"Not yet connected...");
         return NO;
@@ -369,6 +371,8 @@
     const char *bytes = [characteristic.value bytes];
     int firstByte = bytes[0];
     
+    NSLog(@"Reading Car Status");
+    
     if ((firstByte & KHAKI_UNLOCKED) != 0) {
         self.isUnlocked = true;
     } else {
@@ -376,17 +380,23 @@
     }
     
     if ((firstByte & KHAKI_NOTIFYING) != 0) {
-        self.isRanging = true;
+        if (! self.isRanging) {
+            self.isRanging = true;
+            
+            NSLog(@"Start Ranging");
+            [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
+            self.iBeaconLabel.text = @"Started Ranging";
+
+        }
+        
     } else {
-        self.isRanging = false;
-    }
-    
-    if (self.isRanging) {
-        NSLog(@"Start Ranging");
-        [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
-    } else {
-        NSLog(@"Stop Ranging");
-        [self.locationManager stopRangingBeaconsInRegion:self.beaconRegion];
+        if (self.isRanging) {
+            self.isRanging = false;
+            
+            NSLog(@"Stop Ranging");
+            [self.locationManager stopRangingBeaconsInRegion:self.beaconRegion];
+            self.iBeaconLabel.text = @"Stopped Ranging";
+        }
     }
     
     NSLog(@"Car is locked: %x", self.isUnlocked);

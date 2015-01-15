@@ -125,6 +125,12 @@ func (c *Car) ToggleNotifications(status bool) {
 		return
 	}
 
+	if status {
+		log.Println("Enabling notifications")
+	} else {
+		log.Println("Stopping notifications")
+	}
+
 	c.writeStatus(notifier)
 }
 
