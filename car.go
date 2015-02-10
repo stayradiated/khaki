@@ -93,9 +93,7 @@ func (c *Car) Unlock() {
 	defer c.mu.Unlock()
 
 	if !c.isUnlocked {
-		if c.Pin != nil {
-			c.Pin.Set()
-		}
+		go c.pressButton()
 		c.isUnlocked = true
 	}
 }
@@ -106,10 +104,17 @@ func (c *Car) Lock() {
 	defer c.mu.Unlock()
 
 	if c.isUnlocked {
-		if c.Pin != nil {
-			c.Pin.Clear()
-		}
+		go c.pressButton()
 		c.isUnlocked = false
+	}
+}
+
+// Press the button
+func (c *Car) pressButton() {
+	if c.Pin != nil {
+		c.Pin.Set()
+		time.Sleep(500 * time.Millisecond)
+		c.Pin.Clear()
 	}
 }
 
