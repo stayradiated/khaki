@@ -67,13 +67,13 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	service := p.Server.AddService(serviceUUID)
 
 	// Pi LED
-	gpioPin17, err := OpenPinForInput(rpi.GPIO23)
+	gpioPin17, err := OpenPinForInput(rpi.GPIO17)
 	if err != nil {
 		log.Println("Could not open GPIO pin 17")
 	}
 
 	// Power Saving LED
-	gpioPin18, err := OpenPinForInput(rpi.GPIO23)
+	gpioPin18, err := OpenPinForInput(rpi.GPIO18)
 	if err != nil {
 		log.Println("Could not open GPIO pin 18")
 	}
@@ -101,6 +101,7 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 		Blink: 2,
 	}
 
+	log.Println("LED Should be turning on maybe?")
 	p.PiLED.Update(true)
 
 	p.BluetoothLED = &StatusLED{
