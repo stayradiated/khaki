@@ -67,15 +67,15 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	service := p.Server.AddService(serviceUUID)
 
 	// Pi LED
-	gpioPin17, err := OpenPinForInput(rpi.GPIO17)
+	gpioPin27, err := OpenPinForInput(rpi.GPIO27)
 	if err != nil {
-		log.Println("Could not open GPIO pin 17")
+		log.Println("Could not open GPIO pin 27")
 	}
 
 	// Power Saving LED
-	gpioPin18, err := OpenPinForInput(rpi.GPIO18)
+	gpioPin17, err := OpenPinForInput(rpi.GPIO17)
 	if err != nil {
-		log.Println("Could not open GPIO pin 18")
+		log.Println("Could not open GPIO pin 17")
 	}
 
 	// Acc Power Sensor
@@ -97,7 +97,7 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	}
 
 	p.PiLED = &StatusLED{
-		Pin:   gpioPin17,
+		Pin:   gpioPin27,
 		Blink: 2,
 	}
 
@@ -110,7 +110,7 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	}
 
 	p.PowerSavingLED = &StatusLED{
-		Pin:   gpioPin18,
+		Pin:   gpioPin17,
 		Blink: 0,
 	}
 
