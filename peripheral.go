@@ -67,13 +67,13 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	service := p.Server.AddService(serviceUUID)
 
 	// Pi LED
-	gpioPin21, err := OpenPinForInput(rpi.GPIO21)
+	gpioPin21, err := OpenPinForOutput(rpi.GPIO21)
 	if err != nil {
 		log.Println("Could not open GPIO pin 21")
 	}
 
 	// Power Saving LED
-	gpioPin17, err := OpenPinForInput(rpi.GPIO17)
+	gpioPin17, err := OpenPinForOutput(rpi.GPIO17)
 	if err != nil {
 		log.Println("Could not open GPIO pin 17")
 	}
