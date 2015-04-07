@@ -2,12 +2,14 @@ package main
 
 import (
 	"sync"
+	"time"
 
 	"github.com/davecheney/gpio"
 )
 
 type StatusLED struct {
-	Pin gpio.Pin
+	Pin   gpio.Pin
+	Blink time.Duration
 
 	mu     sync.Mutex
 	status bool
@@ -21,8 +23,29 @@ func (s *StatusLED) Update(status bool) {
 
 	if status {
 		s.openPin()
+		s.startBlinking()
 	} else {
 		s.closePin()
+	}
+}
+
+func (s *StatusLED) startBlinking() {
+	if s.Blink > 0 {
+		ticker := time.NewTicker(s.Blink)
+
+		go func() {
+			for _ = range ticker.C {
+
+				if s.status == false {
+					ticker.Stop()
+					break
+				}
+
+				s.closePin()
+				time.Sleep(time.Millisecond * 200)
+				s.openPin()
+			}
+		}()
 	}
 }
 

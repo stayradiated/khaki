@@ -194,7 +194,7 @@
         self.iBeaconLabel.text = [NSString stringWithFormat:@"Prox: %ld -- RSSI: %ld", (long) beacon.proximity, (long) beacon.rssi];
         
         // if (beacon.proximity <= CLProximityNear) {
-        if (beacon.rssi >= -50 && beacon.rssi < 0) {
+        if (beacon.rssi >= -80 && beacon.rssi < 0) {
             if (! self.isUnlocked) {
                 [self unlock];
             }

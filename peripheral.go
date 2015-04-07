@@ -29,10 +29,13 @@ type Peripheral struct {
 	Beacon *gatt.Server
 	Server *gatt.Server
 
-	Car       *Car
-	Auth      *Auth
-	StatusLED *StatusLED
-	Sensor    *Sensor
+	Car            *Car
+	Auth           *Auth
+	PiLED          *StatusLED
+	BluetoothLED   *StatusLED
+	PowerSavingLED *StatusLED
+	AccPowerSensor *Sensor
+	DoorLockSensor *Sensor
 }
 
 func NewPeripheral(c *PeripheralConfig) *Peripheral {
@@ -63,13 +66,51 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	)
 	service := p.Server.AddService(serviceUUID)
 
-	// create status instance
+	// Pi LED
+	gpioPin17, err := OpenPinForInput(rpi.GPIO23)
+	if err != nil {
+		log.Println("Could not open GPIO pin 17")
+	}
+
+	// Power Saving LED
+	gpioPin18, err := OpenPinForInput(rpi.GPIO23)
+	if err != nil {
+		log.Println("Could not open GPIO pin 18")
+	}
+
+	// Acc Power Sensor
+	gpioPin23, err := OpenPinForInput(rpi.GPIO23)
+	if err != nil {
+		log.Println("Could not open GPIO pin 23")
+	}
+
+	// Bluetooth LED
 	gpioPin24, err := OpenPinForOutput(rpi.GPIO24)
 	if err != nil {
 		log.Println("Could not open GPIO pin 24")
 	}
-	p.StatusLED = &StatusLED{
-		Pin: gpioPin24,
+
+	// Remote Relay
+	gpioPin25, err := OpenPinForOutput(rpi.GPIO25)
+	if err != nil {
+		log.Println("Could not open GPIO pin 25")
+	}
+
+	p.PiLED = &StatusLED{
+		Pin:   gpioPin17,
+		Blink: 2,
+	}
+
+	p.PiLED.Update(true)
+
+	p.BluetoothLED = &StatusLED{
+		Pin:   gpioPin24,
+		Blink: 0,
+	}
+
+	p.PowerSavingLED = &StatusLED{
+		Pin:   gpioPin18,
+		Blink: 0,
 	}
 
 	// create auth instance
@@ -81,10 +122,6 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	authChar.HandleWriteFunc(p.Auth.HandleWrite)
 
 	// create car instance
-	gpioPin25, err := OpenPinForOutput(rpi.GPIO25)
-	if err != nil {
-		log.Println("Could not open GPIO pin 25")
-	}
 	p.Car = NewCar(gpioPin25, p.Auth)
 
 	// car characteristic
@@ -94,17 +131,14 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 	carChar.HandleNotifyFunc(p.Car.HandleNotify)
 
 	// sensor
-	gpioPin23, err := OpenPinForInput(rpi.GPIO23)
-	if err != nil {
-		log.Println("Could not open GPIO pin 23")
-	}
-	p.Sensor = &Sensor{
+	p.AccPowerSensor = &Sensor{
 		Pin: gpioPin23,
 		HandleChange: func(sensor bool) {
 			p.Car.ToggleNotifications(sensor)
+			p.PowerSavingLED.Update(sensor)
 		},
 	}
-	p.Sensor.Init()
+	p.AccPowerSensor.Init()
 }
 
 // Start starts running the BLE servers
@@ -126,7 +160,7 @@ func (p *Peripheral) Start() {
 // HandleConnect is called when a central connects
 func (p *Peripheral) handleConnect(conn gatt.Conn) {
 	log.Println("Got connection", conn)
-	p.StatusLED.Update(true)
+	p.BluetoothLED.Update(true)
 
 	log.Println("You have 5 seconds...")
 
@@ -145,5 +179,5 @@ func (p *Peripheral) handleDisconnect(conn gatt.Conn) {
 	p.Car.Lock()
 	p.Car.Reset()
 	p.Auth.Invalidate()
-	p.StatusLED.Update(false)
+	p.BluetoothLED.Update(false)
 }
