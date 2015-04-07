@@ -23,7 +23,7 @@ func (s *StatusLED) Update(status bool) {
 
 	if status {
 		s.openPin()
-		s.startBlinking()
+		// s.startBlinking()
 	} else {
 		s.closePin()
 	}
