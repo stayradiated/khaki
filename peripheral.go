@@ -98,7 +98,7 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 
 	p.PiLED = &StatusLED{
 		Pin:   gpioPin21,
-		Blink: 2,
+		Blink: 2 * time.Second,
 	}
 
 	log.Println("LED Should be turning on maybe?")
