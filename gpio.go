@@ -31,6 +31,16 @@ func OpenPinForOutput(pinId int) (gpio.Pin, error) {
 	return pin, nil
 }
 
+// MustOpenPinForOutput opens up a GPIO pin for output
+// Will panic if pin can't be opened
+func MustOpenPinForOutput(pinId int) gpio.Pin {
+	pin, err := OpenPinForOutput(pinId)
+	if err != nil {
+		panic(err)
+	}
+	return pin
+}
+
 // OpenPinForInput opens up a GPIO pin for input
 func OpenPinForInput(pinId int) (gpio.Pin, error) {
 

@@ -4,11 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecheney/gpio"
+	"github.com/stayradiated/shifty"
 )
 
 type StatusLED struct {
-	Pin   gpio.Pin
+	Pin   shifty.Pin
 	Blink time.Duration
 
 	mu     sync.Mutex

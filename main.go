@@ -38,10 +38,10 @@ func main() {
 	app.Action = func(c *cli.Context) {
 
 		// Create a new peripheral
-		peripheral := NewPeripheral(&PeripheralConfig{
-			Secret: []byte(c.String("secret")),
-			Public: c.Bool("public"),
-		})
+		peripheral := NewPeripheral(NewAuth(
+			[]byte(c.String("secret")),
+			c.Bool("public"),
+		))
 
 		// Start the peripheral
 		peripheral.Start()

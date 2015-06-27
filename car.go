@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecheney/gpio"
 	"github.com/paypal/gatt"
+	"github.com/stayradiated/shifty"
 )
 
 // These bytes are sent over BLE
@@ -19,14 +19,14 @@ type Car struct {
 	Auth *Auth
 
 	mu          sync.Mutex
-	Pin         gpio.Pin
+	Pin         shifty.Pin
 	isUnlocked  bool
 	isNotifying bool
 	notifier    gatt.Notifier
 }
 
 // NewCar creates a new instance of the Car type
-func NewCar(pin gpio.Pin, auth *Auth) *Car {
+func NewCar(pin shifty.Pin, auth *Auth) *Car {
 	return &Car{
 		Pin:         pin,
 		Auth:        auth,

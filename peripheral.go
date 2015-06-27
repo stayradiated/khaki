@@ -6,6 +6,7 @@ import (
 
 	"github.com/davecheney/gpio/rpi"
 	"github.com/paypal/gatt"
+	"github.com/stayradiated/shifty"
 )
 
 var (
@@ -20,34 +21,29 @@ var (
 	beaconUUID = gatt.MustParseUUID("a78d9129-b79a-400f-825e-b691661123eb")
 )
 
-type PeripheralConfig struct {
-	Secret []byte
-	Public bool
-}
-
 type Peripheral struct {
-	Beacon *gatt.Server
-	Server *gatt.Server
-
-	Car            *Car
-	Auth           *Auth
-	PiLED          *StatusLED
-	BluetoothLED   *StatusLED
-	PowerSavingLED *StatusLED
-	AccPowerSensor *Sensor
-	DoorLockSensor *Sensor
+	beacon         *gatt.Server
+	server         *gatt.Server
+	car            *Car
+	auth           *Auth
+	piLED          *StatusLED
+	bluetoothLED   *StatusLED
+	powerSavingLED *StatusLED
+	accPowerSensor *Sensor
+	doorLockSensor *Sensor
 }
 
-func NewPeripheral(c *PeripheralConfig) *Peripheral {
+func NewPeripheral(auth *Auth) *Peripheral {
 	p := new(Peripheral)
-	p.Init(c)
+	p.auth = auth
+	p.Init()
 	return p
 }
 
 // main starts up the BLE server
-func (p *Peripheral) Init(c *PeripheralConfig) {
+func (p *Peripheral) Init() {
 
-	p.Beacon = gatt.NewServer(
+	p.beacon = gatt.NewServer(
 		gatt.Name("KhakiBeacon"),
 		gatt.HCI(1),
 		gatt.AdvertisingPacket(iBeaconPacket(&iBeaconConfig{
@@ -58,24 +54,20 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 		})),
 	)
 
-	p.Server = gatt.NewServer(
+	p.server = gatt.NewServer(
 		gatt.Name("Khaki"),
 		gatt.HCI(0),
 		gatt.Connect(p.handleConnect),
 		gatt.Disconnect(p.handleDisconnect),
 	)
-	service := p.Server.AddService(serviceUUID)
+	service := p.server.AddService(serviceUUID)
 
-	// Pi LED
-	gpioPin21, err := OpenPinForOutput(rpi.GPIO21)
-	if err != nil {
-		log.Println("Could not open GPIO pin 21")
-	}
-
-	// Power Saving LED
-	gpioPin17, err := OpenPinForOutput(rpi.GPIO17)
-	if err != nil {
-		log.Println("Could not open GPIO pin 17")
+	// set up shift register
+	s := &shifty.ShiftRegister{
+		DataPin:  MustOpenPinForOutput(rpi.GPIO17),
+		LatchPin: MustOpenPinForOutput(rpi.GPIO27),
+		ClockPin: MustOpenPinForOutput(rpi.GPIO22),
+		MaxPins:  16,
 	}
 
 	// Acc Power Sensor
@@ -84,75 +76,60 @@ func (p *Peripheral) Init(c *PeripheralConfig) {
 		log.Println("Could not open GPIO pin 23")
 	}
 
-	// Bluetooth LED
-	gpioPin24, err := OpenPinForOutput(rpi.GPIO24)
-	if err != nil {
-		log.Println("Could not open GPIO pin 24")
-	}
-
-	// Remote Relay
-	gpioPin25, err := OpenPinForOutput(rpi.GPIO25)
-	if err != nil {
-		log.Println("Could not open GPIO pin 25")
-	}
-
-	p.PiLED = &StatusLED{
-		Pin:   gpioPin21,
+	p.piLED = &StatusLED{
+		Pin:   s.Pin(0),
 		Blink: 2 * time.Second,
 	}
 
 	log.Println("LED Should be turning on maybe?")
-	p.PiLED.Update(true)
+	p.piLED.Update(true)
 
-	p.BluetoothLED = &StatusLED{
-		Pin:   gpioPin24,
+	p.bluetoothLED = &StatusLED{
+		Pin:   s.Pin(1),
 		Blink: 0,
 	}
 
-	p.PowerSavingLED = &StatusLED{
-		Pin:   gpioPin17,
+	p.powerSavingLED = &StatusLED{
+		Pin:   s.Pin(2),
 		Blink: 0,
 	}
-
-	// create auth instance
-	p.Auth = NewAuth(c.Secret, c.Public)
 
 	// auth characteristic
 	authChar := service.AddCharacteristic(authUUID)
-	authChar.HandleReadFunc(p.Auth.HandleRead)
-	authChar.HandleWriteFunc(p.Auth.HandleWrite)
+	authChar.HandleReadFunc(p.auth.HandleRead)
+	authChar.HandleWriteFunc(p.auth.HandleWrite)
 
 	// create car instance
-	p.Car = NewCar(gpioPin25, p.Auth)
+	p.car = NewCar(s.Pin(3), p.auth)
 
 	// car characteristic
 	carChar := service.AddCharacteristic(carUUID)
-	carChar.HandleReadFunc(p.Car.HandleRead)
-	carChar.HandleWriteFunc(p.Car.HandleWrite)
-	carChar.HandleNotifyFunc(p.Car.HandleNotify)
+	carChar.HandleReadFunc(p.car.HandleRead)
+	carChar.HandleWriteFunc(p.car.HandleWrite)
+	carChar.HandleNotifyFunc(p.car.HandleNotify)
 
 	// sensor
-	p.AccPowerSensor = &Sensor{
+	p.accPowerSensor = &Sensor{
 		Pin: gpioPin23,
 		HandleChange: func(sensor bool) {
-			p.Car.ToggleNotifications(sensor)
-			p.PowerSavingLED.Update(sensor)
+			p.car.ToggleNotifications(sensor)
+			p.powerSavingLED.Update(sensor)
 		},
 	}
-	p.AccPowerSensor.Init()
+	p.accPowerSensor.Init()
 }
 
 // Start starts running the BLE servers
 func (p *Peripheral) Start() {
 	go func() {
-		err := p.Beacon.AdvertiseAndServe()
+		err := p.beacon.AdvertiseAndServe()
 		if err != nil {
 			log.Printf("Error with iBeacon: %s\n", err)
 		}
 	}()
 
 	go func() {
-		log.Fatal(p.Server.AdvertiseAndServe())
+		log.Fatal(p.server.AdvertiseAndServe())
 	}()
 
 	select {}
@@ -161,13 +138,13 @@ func (p *Peripheral) Start() {
 // HandleConnect is called when a central connects
 func (p *Peripheral) handleConnect(conn gatt.Conn) {
 	log.Println("Got connection", conn)
-	p.BluetoothLED.Update(true)
+	p.bluetoothLED.Update(true)
 
 	log.Println("You have 5 seconds...")
 
 	go func() {
 		time.Sleep(5 * time.Second)
-		if !p.Auth.IsAuthenticated() {
+		if !p.auth.IsAuthenticated() {
 			log.Println("You have been disconnected")
 			conn.Close()
 		}
@@ -177,8 +154,8 @@ func (p *Peripheral) handleConnect(conn gatt.Conn) {
 // HandleDisconnect is called when a connection is lost
 func (p *Peripheral) handleDisconnect(conn gatt.Conn) {
 	log.Println("Lost connection", conn)
-	p.Car.Lock()
-	p.Car.Reset()
-	p.Auth.Invalidate()
-	p.BluetoothLED.Update(false)
+	p.car.Lock()
+	p.car.Reset()
+	p.auth.Invalidate()
+	p.bluetoothLED.Update(false)
 }
