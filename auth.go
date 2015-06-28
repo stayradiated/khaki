@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/dustin/randbo"
@@ -15,6 +16,7 @@ type Auth struct {
 	mu        sync.Mutex
 	isAuthed  bool
 	public    bool // if true, then authentication can be bypassed
+	random    io.Reader
 	challenge []byte
 	Secret    []byte
 }
@@ -26,6 +28,7 @@ func NewAuth(secret []byte, public bool) *Auth {
 		isAuthed:  false,
 		public:    public,
 		Secret:    secret,
+		random:    randbo.New(),
 	}
 }
 
@@ -44,8 +47,12 @@ func (a Auth) IsAuthenticated() bool {
 
 // NextChallenege creates a new challenge
 func (a *Auth) NextChallenge() []byte {
-	randbo.New().Read(a.challenge)
-	return a.challenge
+	buf := make([]byte, 16)
+	a.random.Read(buf)
+	a.mu.Lock()
+	a.challenge = buf
+	a.mu.Unlock()
+	return buf
 }
 
 // TestChallenge checks the input against the HMAC-SHA256 of the challenge
