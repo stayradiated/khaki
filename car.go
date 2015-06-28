@@ -107,7 +107,7 @@ func (c *Car) Lock() {
 func (c *Car) pressButton() {
 	if c.Pin != nil {
 		c.Pin.Set()
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		c.Pin.Clear()
 	}
 }
