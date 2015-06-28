@@ -42,15 +42,14 @@ func (a Auth) IsAuthenticated() bool {
 	return isAuthed
 }
 
-// HandleRead creates a new challenge
-func (a *Auth) HandleRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
+// NextChallenege creates a new challenge
+func (a *Auth) NextChallenge() []byte {
 	randbo.New().Read(a.challenge)
-	resp.Write(a.challenge)
-	fmt.Printf("Creating new challenge: %x\n", a.challenge)
+	return a.challenge
 }
 
-// HandleWrite checks the input against the HMAC-SHA256 of the challenge
-func (a *Auth) HandleWrite(req gatt.Request, data []byte) (status byte) {
+// TestChallenge checks the input against the HMAC-SHA256 of the challenge
+func (a *Auth) TestChallenge(data []byte) (status byte) {
 	mac := hmac.New(sha256.New, a.Secret)
 	mac.Write(a.challenge)
 	expectedMac := mac.Sum(nil)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"log"
 	"sync"
 	"time"
@@ -36,7 +35,7 @@ func NewCar(pin shifty.Pin, auth *Auth) *Car {
 }
 
 // HandleWrite will lock or unlock the car
-func (c *Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
+func (c *Car) Write(data []byte) (status byte) {
 	if !c.Auth.IsAuthenticated() {
 		log.Println("You are not authenticated...")
 		return gatt.StatusUnexpectedError
@@ -59,14 +58,9 @@ func (c *Car) HandleWrite(r gatt.Request, data []byte) (status byte) {
 	return gatt.StatusSuccess
 }
 
-// HandleRead reports the current status of the car
-func (c *Car) HandleRead(resp gatt.ReadResponseWriter, req *gatt.ReadRequest) {
-	c.writeStatus(resp)
-}
-
 // HandleNotify sends the current  status of the car to the central every two
 // seconds
-func (c *Car) HandleNotify(r gatt.Request, n gatt.Notifier) {
+func (c *Car) Notify(n gatt.Notifier) {
 	c.mu.Lock()
 	c.notifier = n
 	c.mu.Unlock()
@@ -79,7 +73,7 @@ func (c *Car) HandleNotify(r gatt.Request, n gatt.Notifier) {
 			c.mu.Unlock()
 
 			if isNotifying {
-				c.writeStatus(n)
+				n.Write(c.Status())
 			}
 
 			time.Sleep(10 * time.Second)
@@ -135,7 +129,7 @@ func (c *Car) ToggleNotifications(status bool) {
 		log.Println("Stopping notifications")
 	}
 
-	c.writeStatus(notifier)
+	notifier.Write(c.Status())
 }
 
 func (c *Car) Reset() {
@@ -144,7 +138,7 @@ func (c *Car) Reset() {
 	c.mu.Unlock()
 }
 
-func (c *Car) writeStatus(w io.Writer) {
+func (c *Car) Status() []byte {
 	status := byte(0)
 
 	c.mu.Lock()
@@ -158,5 +152,5 @@ func (c *Car) writeStatus(w io.Writer) {
 
 	log.Printf("%x", status)
 
-	w.Write([]byte{status})
+	return []byte{status}
 }

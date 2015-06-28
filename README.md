@@ -89,3 +89,25 @@ Very simple interface, with just one service with two characteristics.
 - Car `54a64ddf-c756-4a1a-bf9d-14f2cac357ad`
     - Lock `WRITE` `fd1c6fcc-3ca5-48a9-97e9-37f81f5bd9c5`
     - Auth `READ,WRITE` `66e01614-13d1-40d6-a34f-c5360ba57698`
+
+## Pin Layout
+
+    o = used pin
+    . = unused pin
+    * = ground connection
+
+                   +-----+
+    3v3 Power -> 1 | o o | 2 <- 5v Power
+                 3 | . . | 4
+                 5 | . * | 6
+                 7 | . . | 8
+                 9 | * . | 10
+     GPIO 17 -> 11 | o . | 12
+                13 | . * | 14
+     GPIO 22 -> 15 | o o | 16 <- GPIO 23
+   3v3 Power -> 17 | o o | 18 <- GPIO 24
+                19 | . * | 20
+                21 | . o | 22 <- GPIO 25 
+                23 | . . | 24
+                25 | * . | 26
+                   +-----+

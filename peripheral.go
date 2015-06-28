@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -10,20 +11,14 @@ import (
 )
 
 var (
-	// services
-	serviceUUID = gatt.MustParseUUID("54a64ddf-c756-4a1a-bf9d-14f2cac357ad")
-
-	// characteristics
-	carUUID  = gatt.MustParseUUID("fd1c6fcc-3ca5-48a9-97e9-37f81f5bd9c5")
-	authUUID = gatt.MustParseUUID("66e01614-13d1-40d6-a34f-c5360ba57698")
-
-	// beacons
-	beaconUUID = gatt.MustParseUUID("a78d9129-b79a-400f-825e-b691661123eb")
+	// devices
+	beaconDeviceID = 0
+	serverDeviceID = 1
 )
 
 type Peripheral struct {
-	beacon         *gatt.Server
-	server         *gatt.Server
+	beacon         gatt.Device
+	server         gatt.Device
 	car            *Car
 	auth           *Auth
 	piLED          *StatusLED
@@ -42,25 +37,101 @@ func NewPeripheral(auth *Auth) *Peripheral {
 
 // main starts up the BLE server
 func (p *Peripheral) Init() {
+	var err error
 
-	p.beacon = gatt.NewServer(
-		gatt.Name("KhakiBeacon"),
-		gatt.HCI(1),
-		gatt.AdvertisingPacket(iBeaconPacket(&iBeaconConfig{
-			UUID:  beaconUUID,
-			Major: 0,
-			Minor: 0,
-			Power: 0xCD,
-		})),
+	p.beacon, err = gatt.NewDevice(gatt.LnxDeviceID(beaconDeviceID, false))
+	if err != nil {
+		log.Fatalf("Could not open HCI Device %d", beaconDeviceID)
+	}
+
+	p.server, err = gatt.NewDevice(gatt.LnxDeviceID(serverDeviceID, false))
+	if err != nil {
+		log.Fatalf("Could not open HCI Device %d", serverDeviceID)
+	}
+
+	p.InitGPIO()
+	p.InitBeacon(p.beacon)
+	p.InitServer(p.server)
+}
+
+// InitBeacon starts an iBeacon peripheral
+func (p *Peripheral) InitBeacon(d gatt.Device) {
+
+	d.Init(func(d gatt.Device, s gatt.State) {
+		fmt.Printf("State: %s\n", s)
+		switch s {
+		case gatt.StatePoweredOn:
+			err := d.AdvertiseIBeacon(
+				beaconUUID, // uuid
+				0,          // major
+				0,          // minor
+				-77,        // power
+			)
+			if err != nil {
+				log.Fatal(err)
+			}
+		default:
+		}
+	})
+
+	/*
+		p.beacon = gatt.NewServer(
+			gatt.Name("KhakiBeacon"),
+			gatt.HCI(1),
+			gatt.AdvertisingPacket(iBeaconPacket(&iBeaconConfig{
+				UUID:  beaconUUID,
+				Major: 0,
+				Minor: 0,
+				Power: 0xCD,
+			})),
+		)
+	*/
+
+}
+
+func (p *Peripheral) InitServer(d gatt.Device) {
+	d.Handle(
+		gatt.CentralConnected(p.handleConnect),
+		gatt.CentralDisconnected(p.handleDisconnect),
 	)
 
-	p.server = gatt.NewServer(
-		gatt.Name("Khaki"),
-		gatt.HCI(0),
-		gatt.Connect(p.handleConnect),
-		gatt.Disconnect(p.handleDisconnect),
-	)
-	service := p.server.AddService(serviceUUID)
+	d.Init(func(d gatt.Device, s gatt.State) {
+		fmt.Printf("State: %s\n", s)
+		switch s {
+		case gatt.StatePoweredOn:
+			d.AddService(NewKhakiService(p.auth, p.car))
+			d.AdvertiseNameAndServices("Khaki", []gatt.UUID{serviceUUID})
+		default:
+		}
+	})
+}
+
+// HandleConnect is called when a central connects
+func (p *Peripheral) handleConnect(c gatt.Central) {
+	log.Println("Got connection", c.ID())
+	p.bluetoothLED.Update(true)
+
+	log.Println("You have 5 seconds...")
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		if !p.auth.IsAuthenticated() {
+			log.Println("You have been disconnected")
+			c.Close()
+		}
+	}()
+}
+
+// HandleDisconnect is called when a connection is lost
+func (p *Peripheral) handleDisconnect(c gatt.Central) {
+	log.Println("Lost connection", c.ID())
+	p.car.Lock()
+	p.car.Reset()
+	p.auth.Invalidate()
+	p.bluetoothLED.Update(false)
+}
+
+func (p *Peripheral) InitGPIO() {
 
 	// set up shift register
 	s := &shifty.ShiftRegister{
@@ -70,92 +141,27 @@ func (p *Peripheral) Init() {
 		MaxPins:  16,
 	}
 
-	// Acc Power Sensor
-	gpioPin23, err := OpenPinForInput(rpi.GPIO23)
-	if err != nil {
-		log.Println("Could not open GPIO pin 23")
-	}
-
-	p.piLED = &StatusLED{
-		Pin:   s.Pin(0),
-		Blink: 2 * time.Second,
-	}
-
-	log.Println("LED Should be turning on maybe?")
-	p.piLED.Update(true)
-
-	p.bluetoothLED = &StatusLED{
-		Pin:   s.Pin(1),
-		Blink: 0,
-	}
-
-	p.powerSavingLED = &StatusLED{
-		Pin:   s.Pin(2),
-		Blink: 0,
-	}
-
-	// auth characteristic
-	authChar := service.AddCharacteristic(authUUID)
-	authChar.HandleReadFunc(p.auth.HandleRead)
-	authChar.HandleWriteFunc(p.auth.HandleWrite)
+	p.piLED = NewStatusLED(s.Pin(0), 2*time.Second, true)
+	p.bluetoothLED = NewStatusLED(s.Pin(1), 0, false)
+	p.powerSavingLED = NewStatusLED(s.Pin(2), 0, false)
 
 	// create car instance
 	p.car = NewCar(s.Pin(3), p.auth)
 
-	// car characteristic
-	carChar := service.AddCharacteristic(carUUID)
-	carChar.HandleReadFunc(p.car.HandleRead)
-	carChar.HandleWriteFunc(p.car.HandleWrite)
-	carChar.HandleNotifyFunc(p.car.HandleNotify)
+	// Acc Power Sensor
+	accPin, err := OpenPinForInput(rpi.GPIO23)
+	if err != nil {
+		log.Println("Could not open GPIO pin 23")
+	}
 
 	// sensor
 	p.accPowerSensor = &Sensor{
-		Pin: gpioPin23,
+		Pin: accPin,
 		HandleChange: func(sensor bool) {
 			p.car.ToggleNotifications(sensor)
 			p.powerSavingLED.Update(sensor)
 		},
 	}
 	p.accPowerSensor.Init()
-}
 
-// Start starts running the BLE servers
-func (p *Peripheral) Start() {
-	go func() {
-		err := p.beacon.AdvertiseAndServe()
-		if err != nil {
-			log.Printf("Error with iBeacon: %s\n", err)
-		}
-	}()
-
-	go func() {
-		log.Fatal(p.server.AdvertiseAndServe())
-	}()
-
-	select {}
-}
-
-// HandleConnect is called when a central connects
-func (p *Peripheral) handleConnect(conn gatt.Conn) {
-	log.Println("Got connection", conn)
-	p.bluetoothLED.Update(true)
-
-	log.Println("You have 5 seconds...")
-
-	go func() {
-		time.Sleep(5 * time.Second)
-		if !p.auth.IsAuthenticated() {
-			log.Println("You have been disconnected")
-			conn.Close()
-		}
-	}()
-}
-
-// HandleDisconnect is called when a connection is lost
-func (p *Peripheral) handleDisconnect(conn gatt.Conn) {
-	log.Println("Lost connection", conn)
-	p.car.Lock()
-	p.car.Reset()
-	p.auth.Invalidate()
-	p.bluetoothLED.Update(false)
 }

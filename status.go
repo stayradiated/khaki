@@ -15,6 +15,12 @@ type StatusLED struct {
 	status bool
 }
 
+func NewStatusLED(pin shifty.Pin, blink time.Duration, status bool) *StatusLED {
+	led := &StatusLED{Pin: pin, Blink: blink}
+	led.Update(status)
+	return led
+}
+
 // Update sets the status of the LED
 func (s *StatusLED) Update(status bool) {
 	s.mu.Lock()
